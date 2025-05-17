@@ -52,12 +52,17 @@ selected_page = st.sidebar.radio("Go to", pages)
 if selected_page == "Global Overview":
     st.title("🌍 Global Overview")
     st.markdown("""
-    This page provides a global overview of TB prevalence and mortality.
+    This page provides a global overview of TB prevalence and mortality, allowing you to explore the distribution and scale of TB across countries and regions. Use the interactive charts to identify high-burden areas and compare prevalence, mortality, and trends globally.
     """)
-
-    # Add dropdown for page purpose
     with st.expander("What is the purpose of this page?"):
-        st.write("This page provides a high-level summary of global TB statistics, including total population, TB prevalence, and TB deaths. It also includes visualizations to explore TB distribution by region and country.")
+        st.write("""
+        The Global Overview page summarizes TB statistics at a worldwide level. It includes:
+        - **Key Metrics:** Normalized annual population, TB prevalence, and TB deaths for a realistic single-year snapshot.
+        - **Interactive Map:** Visualize TB prevalence rates by country.
+        - **Regional and Country Comparisons:** Pie, bar, box, and scatter plots to compare TB burden across regions and countries.
+        - **Distribution Analysis:** Explore the spread and relationship between TB prevalence and mortality.
+        Use this page to quickly identify global patterns and outliers in TB data.
+        """)
 
     # Display key metrics
     st.subheader("Global Key Metrics")
@@ -158,7 +163,6 @@ if selected_page == "Global Overview":
 
 elif selected_page == "Country Comparison":
     st.title("📊 Country Comparison")
-    # Metrics at the top
     st.subheader("Key Metrics")
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -169,28 +173,30 @@ elif selected_page == "Country Comparison":
         st.metric("Total TB Deaths", f"{round(df['tb_deaths_total'].sum()/23):,}")
     st.divider()
 
-    # Add dropdown for page purpose
     with st.expander("What is the purpose of this page?"):
-        st.write("This page allows users to compare TB statistics across selected countries for a specific year.")
+        st.write("""
+        The Country Comparison page lets you select multiple countries and a specific year to compare TB statistics side by side. Features include:
+        - **Key Metrics:** Normalized annual totals for the selected countries.
+        - **Incidence and Mortality Charts:** Bar charts for direct comparison.
+        - **Trends and Heatmaps:** Visualize how TB prevalence changes over time and across countries.
+        Use this page to benchmark countries, spot leaders and laggards, and analyze year-specific TB data.
+        """)
 
-    # Add filter options to the Country Comparison page
     st.subheader("Filter Options")
     selected_year = st.selectbox("Select Year", sorted(df['year'].unique(), reverse=True))
     selected_country = st.multiselect("Select Country", df['country'].unique(), default=["India", "Pakistan", "China"])
 
-    # Filtered data
     filtered_df = df[(df['year'] == selected_year) & (df['country'].isin(selected_country))]
     if st.button("Show Filtered Data"):
         st.write(filtered_df)
 
-    # Add dropdown for metric explanation
     with st.expander("What do these metrics mean?"):
         st.write("""
-        - **TB Incidence per Country**: The estimated number of TB cases per 100,000 population for each selected country.
-        - **TB Mortality per Country**: The estimated number of TB deaths per 100,000 population for each selected country.
+        - **TB Incidence per Country:** Estimated new TB cases per 100,000 population for each selected country in the chosen year.
+        - **TB Mortality per Country:** Estimated TB deaths per 100,000 population for each selected country in the chosen year.
+        - **Trends/Heatmap:** Show how TB prevalence evolves over time and across countries.
         """)
 
-    # Add visualizations
     st.subheader("TB Incidence per Country")
     fig1 = px.bar(
         filtered_df,
@@ -214,7 +220,6 @@ elif selected_page == "Country Comparison":
     )
     st.plotly_chart(fig2)
 
-    # Add a line chart for TB Prevalence trend for selected countries
     st.subheader("TB Prevalence Trend (Line Chart)")
     if not filtered_df.empty:
         line_fig = px.line(
@@ -227,7 +232,6 @@ elif selected_page == "Country Comparison":
         st.plotly_chart(line_fig)
     st.divider()
 
-    # Add a heatmap for TB Prevalence by country and year
     st.subheader("TB Prevalence Heatmap")
     heatmap_data = df[df['country'].isin(selected_country)].pivot_table(index='country', columns='year', values='tb_prevalence_100k')
     heatmap_fig = px.imshow(
@@ -239,7 +243,6 @@ elif selected_page == "Country Comparison":
 
 elif selected_page == "Trends Over Time":
     st.title("📈 Trends Over Time")
-    # Metrics at the top (for selected country)
     trend_country = st.selectbox("Select Country for Metrics", df['country'].unique(), key="trend_metrics")
     trend_df = df[df['country'] == trend_country]
     st.subheader(f"Key Metrics for {trend_country}")
@@ -263,7 +266,15 @@ elif selected_page == "Trends Over Time":
         )
     st.divider()
 
-    # Add tabs for different trend visualizations
+    with st.expander("What is the purpose of this page?"):
+        st.write("""
+        The Trends Over Time page allows you to analyze how TB incidence and mortality rates have changed for any country over the 23-year dataset. Features include:
+        - **Key Metrics:** Normalized annual totals for the selected country.
+        - **Incidence & Mortality Trends:** Line, bar, and dual-axis charts for time series analysis.
+        - **Distribution & Correlation:** Histogram and scatter plots to explore rate distributions and relationships.
+        Use this page to understand long-term progress, setbacks, and patterns in TB control for any country.
+        """)
+
     tab1, tab2 = st.tabs(["Incidence Trends", "Mortality Trends"])
 
     with tab1:
@@ -283,7 +294,6 @@ elif selected_page == "Trends Over Time":
         st.plotly_chart(fig_incidence)
         
 
-        # Add a bar chart for yearly incidence
         st.subheader("Yearly Incidence Distribution")
         bar_fig = px.bar(
             trend_df,
@@ -310,7 +320,6 @@ elif selected_page == "Trends Over Time":
         )
         st.plotly_chart(fig_mortality)
 
-        # Add a scatter plot for mortality vs. incidence
         st.subheader("Mortality vs. Incidence")
         scatter_fig = px.scatter(
             trend_df,
@@ -322,7 +331,6 @@ elif selected_page == "Trends Over Time":
         )
         st.plotly_chart(scatter_fig)
 
-    # Add a dual-axis line chart for Incidence and Mortality
     st.subheader("Incidence vs. Mortality (Dual Axis)")
     if not trend_df.empty:
         dual_axis_fig = px.line(
@@ -335,7 +343,6 @@ elif selected_page == "Trends Over Time":
         st.plotly_chart(dual_axis_fig)
     st.divider()
 
-    # Add a histogram for TB Incidence
     st.subheader("Incidence Rate Distribution (Histogram)")
     hist_fig = px.histogram(
         trend_df,
@@ -349,7 +356,6 @@ elif selected_page == "Regional Analysis":
     st.title("🌎 Regional Analysis")
     selected_region = st.selectbox("Select Region", df['region'].unique())
     regional_df = df[df['region'] == selected_region]
-    # Metrics at the top
     st.subheader(f"Key Metrics for {selected_region}")
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -359,6 +365,15 @@ elif selected_page == "Regional Analysis":
     with col3:
         st.metric("Total TB Deaths", f"{round(df['tb_deaths_total'].sum()/23):,}")
     st.divider()
+
+    with st.expander("What is the purpose of this page?"):
+        st.write("""
+        The Regional Analysis page focuses on TB statistics within a selected region. Features include:
+        - **Key Metrics:** Normalized annual totals for the region.
+        - **Country Breakdown:** Bar, pie, and box plots for prevalence, mortality, and deaths by country.
+        - **Distribution Analysis:** Explore the spread and variation of TB metrics within the region.
+        Use this page to compare countries within a region and identify regional trends or disparities.
+        """)
 
     st.subheader(f"TB Prevalence in {selected_region}")
     region_fig = px.bar(
@@ -382,7 +397,6 @@ elif selected_page == "Regional Analysis":
     )
     st.plotly_chart(region_mortality_fig)
 
-    # Add a pie chart for TB Deaths by country in the region
     st.subheader(f"TB Deaths by Country in {selected_region} (Pie Chart)")
     pie_deaths = px.pie(
         regional_df,
@@ -393,7 +407,6 @@ elif selected_page == "Regional Analysis":
     st.plotly_chart(pie_deaths)
     st.divider()
 
-    # Add a box plot for TB Incidence in the region
     st.subheader(f"TB Incidence Distribution in {selected_region} (Box Plot)")
     box_incidence = px.box(
         regional_df,
@@ -406,12 +419,19 @@ elif selected_page == "Regional Analysis":
 elif selected_page == "Country Profiles":
     st.title("🌍 Country Profiles")
 
-    # Add tabs for detailed statistics and trends
     tab1, tab2 = st.tabs(["Detailed Statistics", "Trends"])
 
     with tab1:
         selected_country_profile = st.selectbox("Select a Country", df['country'].unique())
         country_df = df[df['country'] == selected_country_profile]
+        with st.expander("What is the purpose of this page?"):
+            st.write(f"""
+            The Country Profiles page provides a deep dive into all available TB statistics for **{selected_country_profile}**. Features include:
+            - **Key Metrics:** Normalized annual population, TB prevalence, and deaths for the country.
+            - **Detailed Table:** All raw data for the country.
+            - **Pie & Bar Charts:** Visualize the proportion and totals of prevalence, incidence, and deaths.
+            Use this page to get a comprehensive view of TB in a single country.
+            """)
 
         st.subheader(f"Key Metrics for {selected_country_profile}")
         col1, col2, col3 = st.columns(3)
@@ -429,7 +449,6 @@ elif selected_page == "Country Profiles":
 
         st.subheader(f"Detailed Statistics for {selected_country_profile}")
         st.write(country_df)
-        # Add a pie chart for prevalence, incidence, and mortality
         st.subheader("Proportion of TB Metrics")
         pie_data = {
             "Metric": ["Prevalence", "Incidence", "Mortality"],
@@ -448,7 +467,6 @@ elif selected_page == "Country Profiles":
         )
         st.plotly_chart(pie_fig)
 
-        # Add a bar chart for deaths, prevalence, and incidence totals
         st.subheader("Total TB Metrics (Bar Chart)")
         bar_totals = px.bar(
             x=["Prevalence", "Incidence", "Deaths"],
@@ -461,6 +479,13 @@ elif selected_page == "Country Profiles":
     with tab2:
         selected_country_profile = st.selectbox("Select a Country for Trends", df['country'].unique(), key="country_trends")
         country_df = df[df['country'] == selected_country_profile]
+        with st.expander("What is the purpose of this page?"):
+            st.write(f"""
+            The Trends tab in Country Profiles shows how TB metrics have changed over time for **{selected_country_profile}**. Features include:
+            - **Key Metrics:** Normalized annual totals and averages for the country.
+            - **Trends & Yearly Charts:** Line, bar, and scatter plots for time series and correlation analysis.
+            Use this tab to analyze progress, setbacks, and patterns in TB control for the selected country.
+            """)
 
         st.subheader(f"Key Metrics for {selected_country_profile}")
         col1, col2, col3 = st.columns(3)
@@ -498,7 +523,6 @@ elif selected_page == "Country Profiles":
         with col3:
             st.metric("Average Incidence Rate", f"{country_df['tb_incidence_100k'].mean():.2f} per 100k")
 
-        # Add a bar chart for yearly trends
         st.subheader("Yearly Trends")
         bar_trends = px.bar(
             country_df,
@@ -511,7 +535,6 @@ elif selected_page == "Country Profiles":
         )
         st.plotly_chart(bar_trends)
 
-        # Add a scatter plot for Prevalence vs. Incidence over years
         st.subheader("Prevalence vs. Incidence Over Years (Scatter Plot)")
         scatter_profile = px.scatter(
             country_df,
@@ -525,36 +548,38 @@ elif selected_page == "Country Profiles":
 
 elif selected_page == "Interactive Data Explorer":
     st.title("🔍 Interactive Data Explorer")
-     # Add dropdown for page purpose
     with st.expander("What is the purpose of this page?"):
-        st.write("This page allows users to explore the dataset interactively by applying filters and custom queries. It also provides visualizations based on the filtered data.")
+        st.write("""
+        The Interactive Data Explorer lets you filter, query, and visualize the TB dataset however you like. Features include:
+        - **Key Metrics:** Totals for your filtered selection.
+        - **Custom Query:** Enter your own conditions to filter the data.
+        - **Flexible Visualizations:** Violin, line, bar, and scatter plots update based on your filters and queries.
+        Use this page for custom analysis, hypothesis testing, or to answer specific questions about the data.
+        """)
 
-    # Add filters for interactive exploration
     selected_region = st.multiselect("Select Region", df['region'].unique(), default=df['region'].unique())
     selected_years = st.slider("Select Year Range", int(df['year'].min()), int(df['year'].max()), (int(df['year'].min()), int(df['year'].max())))
 
     explorer_df = df[(df['region'].isin(selected_region)) & (df['year'].between(*selected_years))]
 
-    # Add dropdown for metric explanation
     with st.expander("What do these metrics mean?"):
         st.write("""
-        - **Region**: The geographical region to which the country belongs.
-        - **Year Range**: The range of years for which data is displayed.
-        - **Custom Query Results**: Results based on user-defined conditions applied to the dataset.
+        - **Region:** The WHO region to which the country belongs.
+        - **Year Range:** The years included in your current filter.
+        - **Custom Query Results:** Data that matches your custom filter or query.
+        - **All metrics are normalized to a single year where noted.**
         """)
 
     st.subheader("Custom Query Results")
     query = st.text_area("Enter a custom query (e.g., `tb_prevalence_100k > 100`)")
     if query:
         try:
-            # Validate the query string before execution
             if any(keyword in query.lower() for keyword in ["import", "exec", "eval", "os.", "sys."]):
                 raise ValueError("Invalid query: Potentially unsafe operations detected.")
 
             query_results = explorer_df.query(query)
             st.write(query_results)
 
-            # Update visuals based on query results
             if not query_results.empty:
                 st.markdown("### TB Prevalence by Region")
                 region_fig = px.bar(
@@ -598,7 +623,6 @@ elif selected_page == "Interactive Data Explorer":
     if st.button("Show Filtered Data"):
         st.write(explorer_df)
 
-    # Add a violin plot for TB Prevalence by region
     st.subheader("TB Prevalence by Region (Violin Plot)")
     violin_fig = px.violin(
         explorer_df,
@@ -611,7 +635,6 @@ elif selected_page == "Interactive Data Explorer":
     st.plotly_chart(violin_fig)
     st.divider()
 
-    # Add a line chart for average TB Prevalence over years (filtered)
     st.subheader("Average TB Prevalence Over Years (Filtered)")
     if not explorer_df.empty:
         avg_year = explorer_df.groupby('year')['tb_prevalence_100k'].mean().reset_index()
@@ -626,28 +649,37 @@ elif selected_page == "Interactive Data Explorer":
 elif selected_page == "Documentation":
     st.title("📚 Documentation")
     st.markdown("""
-    ## Global Tuberculosis (TB) Burden Dashboard
+    # Global Tuberculosis (TB) Burden Dashboard
 
-    This dashboard provides insights into the global burden of Tuberculosis (TB) using data from the World Health Organization (WHO).
+    This Streamlit dashboard provides interactive analytics and visualizations for the global burden of Tuberculosis (TB) using data from the World Health Organization (WHO).
 
-    ### Features:
-    - **Global Overview:** Interactive map showing TB prevalence and mortality by country.
-    - **Country Comparison:** Bar charts comparing TB incidence and mortality across selected countries.
-    - **Trends Over Time:** Line charts showing TB incidence trends for a selected country.
-    - **Regional Analysis:** Bar charts analyzing TB prevalence and mortality by region.
-    - **Country Profiles:** Detailed statistics and trends for individual countries.
-    - **Interactive Data Explorer:** Explore the dataset interactively with custom queries.
+    ## Features
+    - **Global Overview:** Explore TB prevalence and mortality worldwide with interactive maps, charts, and distribution analysis.
+    - **Country Comparison:** Compare TB metrics across countries and years with bar, line, and heatmap visualizations.
+    - **Trends Over Time:** Analyze incidence and mortality trends for any country, including dual-axis, histogram, and scatter plots.
+    - **Regional Analysis:** Visualize TB metrics by region with bar, pie, and box plots.
+    - **Country Profiles:** Detailed statistics and trends for individual countries, including pie, bar, and scatter plots.
+    - **Interactive Data Explorer:** Filter, query, and visualize the dataset with violin, line, and bar plots.
 
-    ### How to Use:
-    1. Use the sidebar to navigate between pages.
-    2. Filter data by year and country using the sidebar filters.
-    3. Explore interactive visualizations and insights on each page.
-
-    ### Data Source:
+    ## Data Source
     - World Health Organization (WHO)
+    - Data file: `data/TB_Burden_Country.csv`
 
-    ### Contact:
-    For questions or feedback, please contact [shahmeershahzad67@gmail.com].
+    ## How to Use
+    1. Use the sidebar to navigate between pages.
+    2. Filter data by year, country, or region as needed.
+    3. Explore interactive visualizations and insights on each page.
+    4. Use the Interactive Data Explorer for custom queries and advanced analytics.
+
+    ## Normalization Note
+    - Most metrics are normalized to a single year (data spans 23 years) to provide realistic annual values and avoid inflated totals.
+
+    ## Customization
+    - Add or update data in `data/TB_Burden_Country.csv`.
+    - Modify `app.py` to add new visualizations or analytics as needed.
+
+    ## Contact
+    For questions or feedback, please contact [shahmeershahzad67@gmail.com](mailto:shahmeershahzad67@gmail.com).
     """)
 
 
