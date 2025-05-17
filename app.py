@@ -144,16 +144,6 @@ elif selected_page == "Country Comparison":
 
     # Add filter options to the Country Comparison page
     st.subheader("Filter Options")
-        color='country',
-        color_discrete_sequence=px.colors.sequential.Plasma,
-    )
-    st.plotly_chart(top_bar)
-
-elif selected_page == "Country Comparison":
-    st.title("📊 Country Comparison")
-
-    # Add filter options to the Country Comparison page
-    st.subheader("Filter Options")
     selected_year = st.selectbox("Select Year", sorted(df['year'].unique(), reverse=True))
     selected_country = st.multiselect("Select Country", df['country'].unique(), default=["India", "Pakistan", "China"])
 
@@ -161,6 +151,13 @@ elif selected_page == "Country Comparison":
     filtered_df = df[(df['year'] == selected_year) & (df['country'].isin(selected_country))]
     if st.button("Show Filtered Data"):
         st.write(filtered_df)
+
+    # Add dropdown for metric explanation
+    with st.expander("What do these metrics mean?"):
+        st.write("""
+        - **TB Incidence per Country**: The estimated number of TB cases per 100,000 population for each selected country.
+        - **TB Mortality per Country**: The estimated number of TB deaths per 100,000 population for each selected country.
+        """)
 
     # Add visualizations
     st.subheader("TB Incidence per Country")
