@@ -213,6 +213,27 @@ if selected_page == "Global Overview":
     scatter_mortality_hiv.update_traces(marker=dict(line=dict(width=1, color='DarkSlateGrey')))
     st.plotly_chart(scatter_mortality_hiv, use_container_width=True)
 
+    # Add a scatter plot for Population vs. TB Incidence globally
+    st.subheader("Population vs. TB Incidence (Global Scatter Plot)")
+    scatter_pop_incidence = px.scatter(
+        df,
+        x='population',
+        y='tb_incident_cases_total',
+        color='region',
+        hover_name='country',
+        title="Population vs. Total TB Incident Cases Globally",
+        size='tb_incidence_100k', # Size points by incidence rate
+        size_max=40,
+        color_discrete_sequence=px.colors.qualitative.Set3,
+        labels={
+            "population": "Population",
+            "tb_incident_cases_total": "Total Incident Cases",
+            "tb_incidence_100k": "Incidence per 100k"
+        }
+    )
+    scatter_pop_incidence.update_traces(marker=dict(line=dict(width=1, color='DarkSlateGrey')))
+    st.plotly_chart(scatter_pop_incidence, use_container_width=True)
+
 elif selected_page == "Country Comparison":
     st.title("📊 Country Comparison")
     st.subheader("Key Metrics (Normalized)")
@@ -233,6 +254,7 @@ elif selected_page == "Country Comparison":
         - **Key Metrics:** Normalized annual totals for the selected countries.
         - **Incidence and Mortality Charts:** Bar charts for direct comparison.
         - **Trends and Heatmaps:** Visualize how TB prevalence changes over time and across countries.
+        - **Case and Death Comparison:** Stacked bar chart for total incident cases and deaths.
         Use this page to benchmark countries, spot leaders and laggards, and analyze year-specific TB data.
         """)
 
@@ -249,6 +271,7 @@ elif selected_page == "Country Comparison":
         - **TB Incidence per Country:** Estimated new TB cases per 100,000 population for each selected country in the chosen year.
         - **TB Mortality per Country:** Estimated TB deaths per 100,000 population for each selected country in the chosen year.
         - **Trends/Heatmap:** Show how TB prevalence evolves over time and across countries.
+        - **Total Cases and Deaths:** Total estimated incident cases and deaths for the selected countries in the chosen year.
         """)
 
     st.subheader("TB Incidence per Country")
@@ -278,7 +301,27 @@ elif selected_page == "Country Comparison":
     fig2.update_layout(xaxis_tickangle=-45)
     st.plotly_chart(fig2, use_container_width=True)
 
-    st.subheader("TB Prevalence Trend for Selected Countries")
+    # Add a stacked bar chart for total cases and deaths
+    st.subheader(f"Total Incident Cases and Deaths ({selected_year})")
+    if not filtered_df.empty:
+        # Calculate total cases and deaths for the selected year and countries
+        compare_case_death_df = filtered_df.copy()
+        compare_case_death_df['actual_deaths'] = compare_case_death_df['tb_mortality_100k'] * compare_case_death_df['population'] / 100000
+
+        stacked_case_death = px.bar(
+            compare_case_death_df,
+            x='country',
+            y=['tb_incident_cases_total', 'actual_deaths'],
+            title=f"Total TB Incident Cases and Deaths in {selected_year}",
+            labels={'value': 'Count', 'variable': 'Metric'},
+            barmode='stack',
+            color_discrete_sequence=['#636EFA', '#EF553B'] # Use distinct colors
+        )
+        st.plotly_chart(stacked_case_death, use_container_width=True)
+    else:
+        st.warning("No data available for the selected year and countries to compare total cases and deaths.")
+
+    st.subheader("TB Incidence Trend for Selected Countries")
     if not filtered_df.empty:
         line_fig = px.line(
             df[df['country'].isin(selected_country)],
@@ -361,9 +404,6 @@ elif selected_page == "Trends Over Time":
 
     with tab1:
         st.subheader("Incidence Trends")
-        # Remove duplicate selectbox, using the one from the top of the page
-        # trend_country = st.selectbox("Select Country for Incidence Trend", df['country'].unique(), index=df['country'].tolist().index('Afghanistan'))
-        # trend_df = df[df['country'] == trend_country]
         col1, col2, col3 = st.columns(3)
         with col2:
             st.metric("Average Incidence Rate", f"{trend_df['tb_incidence_100k'].mean():.2f} per 100k")
@@ -376,7 +416,6 @@ elif selected_page == "Trends Over Time":
         )
         st.plotly_chart(fig_incidence)
         
-
         st.subheader("Yearly Incidence Distribution")
         bar_fig = px.bar(
             trend_df,
@@ -387,11 +426,20 @@ elif selected_page == "Trends Over Time":
         )
         st.plotly_chart(bar_fig)
 
+        # Add an Area Chart for Total Incident Cases over Time
+        st.subheader("Total Incident Cases Over Time")
+        area_fig_incidence = px.area(
+            trend_df,
+            x='year',
+            y='tb_incident_cases_total',
+            title=f"Total TB Incident Cases Over Time in {trend_country}",
+            color_discrete_sequence=["#00CC96"],
+            labels={'tb_incident_cases_total': 'Total Cases'}
+        )
+        st.plotly_chart(area_fig_incidence)
+
     with tab2:
         st.subheader("Mortality Trends")
-        # Remove duplicate selectbox, using the one from the top of the page
-        # trend_country = st.selectbox("Select Country for Mortality Trend", df['country'].unique(), index=df['country'].tolist().index('Afghanistan'), key="mortality_trend")
-        # trend_df = df[df['country'] == trend_country]
         col1, col2, col3 = st.columns(3)
         with col2:
             st.metric("Average Mortality Rate", f"{trend_df['tb_mortality_100k'].mean():.2f} per 100k")
@@ -538,6 +586,27 @@ elif selected_page == "Regional Analysis":
     )
     st.plotly_chart(region_trend_fig)
 
+    # Add a scatter plot to explore the relationship between Population and TB Mortality per 100k
+    st.subheader(f"Population vs. TB Mortality in {selected_region} (Scatter Plot)")
+    scatter_pop_mortality_region = px.scatter(
+        regional_df,
+        x='population',
+        y='tb_mortality_100k',
+        color='country',
+        hover_name='country',
+        title=f"Population vs. TB Mortality per 100k in {selected_region}",
+        size='tb_incident_cases_total', # Size points by total incident cases
+        size_max=40,
+        color_discrete_sequence=px.colors.qualitative.Set3,
+        labels={
+            "population": "Population",
+            "tb_mortality_100k": "Mortality per 100k",
+            "tb_incident_cases_total": "Total Incident Cases"
+        }
+    )
+    scatter_pop_mortality_region.update_traces(marker=dict(line=dict(width=1, color='DarkSlateGrey')))
+    st.plotly_chart(scatter_pop_mortality_region, use_container_width=True)
+
 elif selected_page == "Country Profiles":
     st.title("🌍 Country Profiles")
 
@@ -612,6 +681,22 @@ elif selected_page == "Country Profiles":
             title=f"Total TB Metrics for {selected_country_profile}"
         )
         st.plotly_chart(bar_totals)
+
+        # Add a bar chart for average key metrics across all years
+        st.subheader(f"Average Key Metrics for {selected_country_profile} (All Years)")
+        average_metrics = country_df[['tb_incidence_100k', 'tb_mortality_100k', 'hiv_in_tb_percent', 'detection_rate']].mean().reset_index()
+        average_metrics.columns = ['Metric', 'Average Value']
+
+        average_metrics_bar = px.bar(
+            average_metrics,
+            x='Metric',
+            y='Average Value',
+            title=f"Average TB Metrics for {selected_country_profile} (1990-2023)",
+            labels={'Average Value': 'Average Value'},
+            color='Metric',
+            color_discrete_sequence=px.colors.qualitative.Set2
+        )
+        st.plotly_chart(average_metrics_bar, use_container_width=True)
 
     with tab2:
         # Remove duplicate selectbox, using the one from the top of the page
@@ -702,6 +787,22 @@ elif selected_page == "Country Profiles":
             color_discrete_sequence=["#FFA15A"]
         )
         st.plotly_chart(fig_hiv_profile)
+
+        # Add a scatter plot showing HIV in TB Percentage vs. Detection Rate over years
+        st.subheader("HIV in TB vs. Detection Rate Over Years")
+        scatter_hiv_detection = px.scatter(
+            country_df,
+            x='detection_rate',
+            y='hiv_in_tb_percent',
+            color='year',
+            title=f"HIV in TB Percentage vs. Detection Rate Over Years in {selected_country_profile}",
+            labels={
+                "detection_rate": "Detection Rate (%)",
+                "hiv_in_tb_percent": "HIV in TB (%)"
+            },
+            hover_name='year'
+        )
+        st.plotly_chart(scatter_hiv_detection, use_container_width=True)
 
 elif selected_page == "Interactive Data Explorer":
     st.title("🔍 Interactive Data Explorer")
@@ -912,7 +1013,18 @@ elif selected_page == "Country Similarity & Correlation":
             # Display similar countries in a formatted way
             similar_countries_df = sorted_similar_countries.head(num_similar_countries).reset_index()
             similar_countries_df.columns = ['Country', 'Cosine Similarity Score']
-            st.dataframe(similar_countries_df)
+            # st.dataframe(similar_countries_df) # Remove the table display
+
+            # Add a bar chart for similarity scores
+            st.subheader("Cosine Similarity Scores")
+            similarity_bar_chart = px.bar(
+                similar_countries_df,
+                x='Country',
+                y='Cosine Similarity Score',
+                title=f"Cosine Similarity Scores for Countries Most Similar to {selected_country_similarity}",
+                labels={'Cosine Similarity Score': 'Score'}
+            )
+            st.plotly_chart(similarity_bar_chart, use_container_width=True)
 
             # Add visual comparison: Bar chart comparing metrics of selected country and similar countries
             st.subheader("Metric Comparison with Similar Countries")
@@ -938,23 +1050,36 @@ elif selected_page == "Country Similarity & Correlation":
                 st.plotly_chart(comparison_bar, use_container_width=True)
 
                 # Add a Radar Chart for comparison
-                st.subheader("Radar Chart Comparison")
+                # st.subheader("Radar Chart Comparison")
 
                 # Radar chart requires a specific data structure
                 # We already have compare_melted which is in long format, suitable for radar chart
-                radar_chart = px.line_polar(
+                # radar_chart = px.line_polar(
+                #     country_df, 
+                #     r='tb_incidence_100k', 
+                #     theta='tb_mortality_100k', 
+                #     color='year',
+                #     line_close=True,
+                #     title=f"Radar Chart of TB Metrics for {selected_country_similarity} and Similar Countries ({latest_year})",
+                #     # Add line tension for smoother lines
+                #     line_shape='linear'
+                # )
+                # # Customize radar chart layout
+                # radar_chart.update_traces(fill='toself')
+                # st.plotly_chart(radar_chart, use_container_width=True)
+
+                # Add a scatter plot showing HIV in TB Percentage vs. Detection Rate over years
+                st.subheader("HIV in TB vs. Detection Rate Over Years")
+                scatter_hiv_detection = px.scatter(
                     compare_melted, 
-                    r='Value', 
-                    theta='Metric', 
+                    x='Value', 
+                    y='Metric', 
                     color='country',
-                    line_close=True,
-                    title=f"Radar Chart of TB Metrics for {selected_country_similarity} and Similar Countries ({latest_year})",
+                    title=f"HIV in TB vs. Detection Rate Over Years in {selected_country_similarity}",
                     # Add line tension for smoother lines
                     line_shape='linear'
                 )
-                # Customize radar chart layout
-                radar_chart.update_traces(fill='toself')
-                st.plotly_chart(radar_chart, use_container_width=True)
+                st.plotly_chart(scatter_hiv_detection, use_container_width=True)
 
             else:
                 st.warning("Not enough data to compare metrics for the selected country and similar countries.")
