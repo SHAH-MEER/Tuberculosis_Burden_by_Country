@@ -4,35 +4,35 @@ import plotly.express as px
 
 
 st.set_page_config(layout="wide")
+
 # Load data
 @st.cache_data
 def load_data():
-    df = pd.read_csv("data/TB_Burden_Country.csv")
+    df = pd.read_csv("data/combined_tb_data_1990_2023.csv")
     # Rename columns to shorter and more suitable names
     df = df.rename(columns={
-        "Country or territory name": "country",
-        "ISO 2-character country/territory code": "iso2",
-        "ISO 3-character country/territory code": "iso3",
-        "ISO numeric country/territory code": "iso_num",
-        "Region": "region",
-        "Year": "year",
-        "Estimated total population number": "population",
-        "Estimated prevalence of TB (all forms) per 100 000 population": "tb_prevalence_100k",
-        "Estimated prevalence of TB (all forms) per 100 000 population, low bound": "tb_prevalence_100k_low",
-        "Estimated prevalence of TB (all forms) per 100 000 population, high bound": "tb_prevalence_100k_high",
-        "Estimated prevalence of TB (all forms)": "tb_prevalence_total",
-        "Estimated mortality of TB cases (all forms, excluding HIV) per 100 000 population": "tb_mortality_100k",
-        "Estimated mortality of TB cases (all forms, excluding HIV), per 100 000 population, low bound": "tb_mortality_100k_low",
-        "Estimated mortality of TB cases (all forms, excluding HIV), per 100 000 population, high bound": "tb_mortality_100k_high",
-        "Estimated number of deaths from TB (all forms, excluding HIV)": "tb_deaths_total",
-        "Estimated number of deaths from TB (all forms, excluding HIV), low bound": "tb_deaths_low",
-        "Estimated number of deaths from TB (all forms, excluding HIV), high bound": "tb_deaths_high",
-        "Estimated incidence (all forms) per 100 000 population": "tb_incidence_100k",
-        "Estimated incidence (all forms) per 100 000 population, low bound": "tb_incidence_100k_low",
-        "Estimated incidence (all forms) per 100 000 population, high bound": "tb_incidence_100k_high",
-        "Estimated number of incident cases (all forms)": "tb_incident_cases_total",
-        "Estimated number of incident cases (all forms), low bound": "tb_incident_cases_low",
-        "Estimated number of incident cases (all forms), high bound": "tb_incident_cases_high"
+        "country": "country",
+        "iso2": "iso2",
+        "iso3": "iso3",
+        "iso_numeric": "iso_num",
+        "region": "region",
+        "year": "year",
+        "population": "population",
+        "incidence_rate": "tb_incidence_100k",
+        "incidence_rate_lo": "tb_incidence_100k_low",
+        "incidence_rate_hi": "tb_incidence_100k_high",
+        "incidence_num": "tb_incident_cases_total",
+        "incidence_num_lo": "tb_incident_cases_low",
+        "incidence_num_hi": "tb_incident_cases_high",
+        "mort_rate_no_hiv": "tb_mortality_100k",
+        "mort_rate_no_hiv_lo": "tb_mortality_100k_low",
+        "mort_rate_no_hiv_hi": "tb_mortality_100k_high",
+        "hiv_in_tb_percent": "hiv_in_tb_percent",
+        "hiv_in_tb_percent_lo": "hiv_in_tb_percent_lo",
+        "hiv_in_tb_percent_hi": "hiv_in_tb_percent_hi",
+        "detection_rate": "detection_rate",
+        "detection_rate_lo": "detection_rate_lo",
+        "detection_rate_hi": "detection_rate_hi"
     })
     return df
 
@@ -70,107 +70,160 @@ if selected_page == "Global Overview":
     with col1:
         st.metric(
             "Total Population",
-            f"{round(df['population'].sum()/23):,}",
-            help="Normalized to a single year (data spans 23 years) to avoid unrealistic totals."
+            f"{round(df['population'].sum()/len(df['year'].unique())):,.0f}",
+            help="Normalized to a single year (data spans multiple years) to avoid unrealistic totals."
         )
     with col2:
         st.metric(
-            "Total TB Prevalence",
-            f"{round(df['tb_prevalence_total'].sum()/23):,}",
-            help="Normalized to a single year (data spans 23 years) to avoid unrealistic totals."
+            "Total TB Incidence",
+            f"{round(df['tb_incident_cases_total'].sum()/len(df['year'].unique())):,.0f}",
+            help="Normalized to a single year (data spans multiple years) to avoid unrealistic totals."
         )
     with col3:
+        # Calculate actual deaths by using mortality rate and population, then normalize to a year
+        total_deaths = (df['tb_mortality_100k'] * df['population'] / 100000).sum() / len(df['year'].unique())
         st.metric(
             "Total TB Deaths",
-            f"{round(df['tb_deaths_total'].sum()/23):,}",
-            help="Normalized to a single year (data spans 23 years) to avoid unrealistic totals."
+            f"{round(total_deaths):,.0f}",
+            help="Normalized to a single year (data spans multiple years) to avoid unrealistic totals."
         )
     st.divider()
 
     # Add dropdown for metric explanation
     with st.expander("What do these metrics mean?"):
         st.write("""
-        - **Total Population**: The total population across all countries in the dataset.
-        - **Total TB Prevalence**: The total number of TB cases (all forms) across all countries.
-        - **Total TB Deaths**: The total number of deaths caused by TB (excluding HIV) across all countries.
+        - **Total Population**: The total population across all countries in the dataset, normalized to a single year.
+        - **Total TB Incidence**: The total number of new TB cases (all forms) across all countries, normalized to a single year.
+        - **Total TB Deaths**: The total number of deaths caused by TB (excluding HIV) across all countries, normalized to a single year.
         """)
 
     # Update the Plotly map to color the countries instead of using blobs
-    st.subheader("Global TB Prevalence Map")
+    st.subheader("Global TB Incidence Map")
     map_fig = px.choropleth(
         df,
         locations="iso3",
-        color="tb_prevalence_100k",
+        color="tb_incidence_100k",
         hover_name="country",
         projection="equirectangular",
-        title="Global TB Prevalence by Country",
-        color_continuous_scale=px.colors.sequential.Magma_r
+        title="Global TB Incidence by Country",
+        color_continuous_scale="Reds",
+        range_color=[0, df['tb_incidence_100k'].quantile(0.95)],  # Cap at 95th percentile to highlight differences
+        labels={"tb_incidence_100k": "Incidence per 100k"}
     )
-    st.plotly_chart(map_fig)
+    map_fig.update_layout(
+        geo=dict(
+            showframe=False,
+            showcoastlines=True,
+            projection_type='equirectangular'
+        ),
+        margin=dict(l=0, r=0, t=30, b=0)
+    )
+    st.plotly_chart(map_fig, use_container_width=True)
     st.divider()
 
-    # Add a pie chart for TB prevalence by region
-    st.subheader("TB Prevalence by Region")
-    region_pie = px.pie(
-        df.groupby('region').sum().reset_index(),
-        names='region',
-        values='tb_prevalence_total',
-        title="TB Prevalence Distribution by Region",
-        color_discrete_sequence=px.colors.sequential.RdBu
-    )
-    st.plotly_chart(region_pie)
+    # Add a pie chart for TB incidence by region
+    st.subheader("TB Incidence by Region")
+    # Use columns for side-by-side charts if space allows
+    col_pie, col_top_bar = st.columns(2)
+    with col_pie:
+        st.subheader("TB Incidence by Region")
+        region_pie = px.pie(
+            df.groupby('region').sum().reset_index(),
+            names='region',
+            values='tb_incident_cases_total',
+            title="TB Incidence Distribution by Region",
+            color_discrete_sequence=px.colors.qualitative.Plotly, # Use Plotly qualitative palette
+            hole=0.4  # Make it a donut chart
+        )
+        region_pie.update_traces(textposition='inside', textinfo='percent+label')
+        st.plotly_chart(region_pie, use_container_width=True)
+
+    # Add a bar chart for top 10 countries with highest TB incidence
+    with col_top_bar:
+        st.subheader("Top 10 Countries with Highest TB Incidence")
+        top_countries = df.groupby('country').sum().reset_index().nlargest(10, 'tb_incident_cases_total')
+        top_bar = px.bar(
+            top_countries,
+            x='country',
+            y='tb_incident_cases_total',
+            title="Top 10 Countries by TB Incidence",
+            color='tb_incident_cases_total',
+            color_continuous_scale="Viridis", # Use Viridis for sequential
+            labels={"tb_incident_cases_total": "Total Cases", "country": "Country"}
+        )
+        top_bar.update_layout(xaxis_tickangle=-45)
+        st.plotly_chart(top_bar, use_container_width=True)
+
     st.divider()
 
-    # Add a bar chart for top 10 countries with highest TB prevalence
-    st.subheader("Top 10 Countries with Highest TB Prevalence")
-    top_countries = df.groupby('country').sum().reset_index().nlargest(10, 'tb_prevalence_total')
-    top_bar = px.bar(
-        top_countries,
-        x='country',
-        y='tb_prevalence_total',
-        title="Top 10 Countries by TB Prevalence",
-        color='country',
-        color_discrete_sequence=px.colors.sequential.Plasma
-    )
-    st.plotly_chart(top_bar)
+    # Add a box plot for TB Incidence distribution and scatter plot side-by-side
+    col_box, col_scatter = st.columns(2)
+    with col_box:
+        st.subheader("TB Incidence Distribution by Region (Box Plot)")
+        box_fig = px.box(
+            df,
+            x='region',
+            y='tb_incidence_100k',
+            color='region',
+            title="TB Incidence per 100k by Region",
+            points="outliers",
+            color_discrete_sequence=px.colors.qualitative.Set3 # Use Set3 qualitative palette
+        )
+        box_fig.update_layout(xaxis_tickangle=-45)
+        st.plotly_chart(box_fig, use_container_width=True)
 
-    # Add a box plot for TB Prevalence distribution
-    st.subheader("Distribution of TB Prevalence (Box Plot)")
-    box_fig = px.box(
+    with col_scatter:
+        st.subheader("Incidence vs. Mortality (Scatter Plot)")
+        scatter_fig = px.scatter(
+            df,
+            x='tb_incidence_100k',
+            y='tb_mortality_100k',
+            color='region',
+            hover_name='country',
+            title="TB Incidence vs. Mortality by Country",
+            size='population',
+            size_max=40,
+            color_discrete_sequence=px.colors.qualitative.Set3, # Use Set3 qualitative palette
+            labels={
+                "tb_incidence_100k": "Incidence per 100k",
+                "tb_mortality_100k": "Mortality per 100k"
+            }
+        )
+        scatter_fig.update_traces(marker=dict(line=dict(width=1, color='DarkSlateGrey')))
+        st.plotly_chart(scatter_fig, use_container_width=True)
+
+    # Add a scatter plot for TB Mortality vs. HIV in TB globally
+    st.subheader("Mortality vs. HIV in TB (Global Scatter Plot)")
+    scatter_mortality_hiv = px.scatter(
         df,
-        x='region',
-        y='tb_prevalence_100k',
-        color='region',
-        title="TB Prevalence per 100k by Region (Box Plot)",
-        points="all"
-    )
-    st.plotly_chart(box_fig)
-    st.divider()
-
-    # Add a scatter plot for TB Prevalence vs. Mortality
-    st.subheader("Prevalence vs. Mortality (Scatter Plot)")
-    scatter_fig = px.scatter(
-        df,
-        x='tb_prevalence_100k',
-        y='tb_mortality_100k',
+        x='tb_mortality_100k',
+        y='hiv_in_tb_percent',
         color='region',
         hover_name='country',
-        title="TB Prevalence vs. Mortality by Country",
-        size='population',
-        size_max=40
+        title="TB Mortality vs. HIV in TB Percentage Globally",
+        size='population', # Size points by population
+        size_max=40,
+        color_discrete_sequence=px.colors.qualitative.Set3, # Use Set3 qualitative palette
+        labels={
+            "tb_mortality_100k": "Mortality per 100k",
+            "hiv_in_tb_percent": "HIV in TB (%)"
+        }
     )
-    st.plotly_chart(scatter_fig)
+    scatter_mortality_hiv.update_traces(marker=dict(line=dict(width=1, color='DarkSlateGrey')))
+    st.plotly_chart(scatter_mortality_hiv, use_container_width=True)
 
 elif selected_page == "Country Comparison":
     st.title("📊 Country Comparison")
-    st.subheader("Key Metrics")
+    st.subheader("Key Metrics (Normalized)")
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("Total Population", f"{round(df['population'].sum()/23):,}")
+        st.metric("Total Population", f"{round(df['population'].sum()/len(df['year'].unique())):,.0f}")
     with col2:
-        st.metric("Total TB Prevalence", f"{round(df['tb_prevalence_total'].sum()/23):,}")
+        st.metric("Total TB Incidence", f"{round(df['tb_incident_cases_total'].sum()/len(df['year'].unique())):,.0f}")
     with col3:
-        st.metric("Total TB Deaths", f"{round(df['tb_deaths_total'].sum()/23):,}")
+        # Calculate actual deaths for the country
+        country_deaths = (df['tb_mortality_100k'] * df['population'] / 100000).sum() / len(df['year'].unique())
+        st.metric("Total TB Deaths", f"{round(country_deaths):,.0f}")
     st.divider()
 
     with st.expander("What is the purpose of this page?"):
@@ -201,12 +254,14 @@ elif selected_page == "Country Comparison":
     fig1 = px.bar(
         filtered_df,
         x='country',
-        y='tb_prevalence_100k',
-        color='country',
+        y='tb_incidence_100k',
+        color='tb_incidence_100k',
         title="Estimated TB Incidence per 100,000",
-        color_discrete_sequence=px.colors.sequential.Viridis
+        color_continuous_scale="Reds",
+        labels={"tb_incidence_100k": "Incidence per 100k", "country": "Country"}
     )
-    st.plotly_chart(fig1)
+    fig1.update_layout(xaxis_tickangle=-45)
+    st.plotly_chart(fig1, use_container_width=True)
     st.divider()
 
     st.subheader("TB Mortality per Country")
@@ -214,61 +269,87 @@ elif selected_page == "Country Comparison":
         filtered_df,
         x='country',
         y='tb_mortality_100k',
-        color='country',
+        color='tb_mortality_100k',
         title="Estimated TB Mortality per 100,000",
-        color_discrete_sequence=px.colors.sequential.Cividis
+        color_continuous_scale="Reds",
+        labels={"tb_mortality_100k": "Mortality per 100k", "country": "Country"}
     )
-    st.plotly_chart(fig2)
+    fig2.update_layout(xaxis_tickangle=-45)
+    st.plotly_chart(fig2, use_container_width=True)
 
-    st.subheader("TB Prevalence Trend (Line Chart)")
+    st.subheader("TB Prevalence Trend for Selected Countries")
     if not filtered_df.empty:
         line_fig = px.line(
             df[df['country'].isin(selected_country)],
             x='year',
-            y='tb_prevalence_100k',
+            y='tb_incidence_100k',
             color='country',
-            title="TB Prevalence Trend for Selected Countries"
+            title="TB Prevalence Trend for Selected Countries",
+            labels={"tb_incidence_100k": "Incidence per 100k", "year": "Year"},
+            color_discrete_sequence=px.colors.qualitative.Set3
         )
-        st.plotly_chart(line_fig)
+        line_fig.update_layout(
+            xaxis=dict(
+                tickmode='linear',
+                tick0=1990,
+                dtick=5
+            )
+        )
+        st.plotly_chart(line_fig, use_container_width=True)
     st.divider()
 
-    st.subheader("TB Prevalence Heatmap")
-    heatmap_data = df[df['country'].isin(selected_country)].pivot_table(index='country', columns='year', values='tb_prevalence_100k')
+    st.subheader("TB Incidence Heatmap")
+    heatmap_data = df[df['country'].isin(selected_country)].pivot_table(
+        index='country', 
+        columns='year', 
+        values='tb_incidence_100k'
+    )
     heatmap_fig = px.imshow(
         heatmap_data,
-        labels=dict(x="Year", y="Country", color="Prevalence per 100k"),
-        title="TB Prevalence Heatmap (Country vs Year)"
+        labels=dict(x="Year", y="Country", color="Incidence per 100k"),
+        title="TB Incidence Heatmap (Country vs Year)",
+        color_continuous_scale="Reds",
+        aspect="auto"
     )
-    st.plotly_chart(heatmap_fig)
+    st.plotly_chart(heatmap_fig, use_container_width=True)
 
 elif selected_page == "Trends Over Time":
     st.title("📈 Trends Over Time")
-    trend_country = st.selectbox("Select Country for Metrics", df['country'].unique(), key="trend_metrics")
+    # Use a single selectbox for the entire page
+    trend_country = st.selectbox(
+        "Select Country",
+        df['country'].unique(),
+        index=df['country'].tolist().index('Afghanistan'),
+        key="trends_country_selection"
+    )
     trend_df = df[df['country'] == trend_country]
     st.subheader(f"Key Metrics for {trend_country}")
     col1, col2, col3 = st.columns(3)
     with col1:
         st.metric(
             "Total Population",
-            f"{round(trend_df['population'].sum()/23):,}",
-            help="Normalized to a single year (data spans 23 years) to avoid unrealistic totals."
+            f"{round(trend_df['population'].sum()/len(trend_df['year'].unique())):,.0f}",
+            help="Normalized to a single year (data spans multiple years) to avoid unrealistic totals."
         )
     with col2:
         st.metric(
-            "Total TB Prevalence",
-            f"{round(trend_df['tb_prevalence_total'].sum()/23):,}",
-            help="Normalized to a single year (data spans 23 years) to avoid unrealistic totals."
+            "Total TB Incidence",
+            f"{round(trend_df['tb_incident_cases_total'].sum()/len(trend_df['year'].unique())):,.0f}",
+            help="Normalized to a single year (data spans multiple years) to avoid unrealistic totals."
         )
     with col3:
+        # Calculate actual deaths for the country
+        country_deaths = (trend_df['tb_mortality_100k'] * trend_df['population'] / 100000).sum() / len(trend_df['year'].unique())
         st.metric(
             "Total TB Deaths",
-            f"{trend_df['tb_deaths_total'].sum():,}"
+            f"{round(country_deaths):,.0f}",
+            help="Normalized to a single year (data spans multiple years) to avoid unrealistic totals."
         )
     st.divider()
 
     with st.expander("What is the purpose of this page?"):
         st.write("""
-        The Trends Over Time page allows you to analyze how TB incidence and mortality rates have changed for any country over the 23-year dataset. Features include:
+        The Trends Over Time page allows you to analyze how TB incidence and mortality rates, detection rates, and HIV co-infection percentages have changed for any country over the dataset period. Features include:
         - **Key Metrics:** Normalized annual totals for the selected country.
         - **Incidence & Mortality Trends:** Line, bar, and dual-axis charts for time series analysis.
         - **Distribution & Correlation:** Histogram and scatter plots to explore rate distributions and relationships.
@@ -279,8 +360,9 @@ elif selected_page == "Trends Over Time":
 
     with tab1:
         st.subheader("Incidence Trends")
-        trend_country = st.selectbox("Select Country for Incidence Trend", df['country'].unique())
-        trend_df = df[df['country'] == trend_country]
+        # Remove duplicate selectbox, using the one from the top of the page
+        # trend_country = st.selectbox("Select Country for Incidence Trend", df['country'].unique(), index=df['country'].tolist().index('Afghanistan'))
+        # trend_df = df[df['country'] == trend_country]
         col1, col2, col3 = st.columns(3)
         with col2:
             st.metric("Average Incidence Rate", f"{trend_df['tb_incidence_100k'].mean():.2f} per 100k")
@@ -306,8 +388,9 @@ elif selected_page == "Trends Over Time":
 
     with tab2:
         st.subheader("Mortality Trends")
-        trend_country = st.selectbox("Select Country for Mortality Trend", df['country'].unique(), key="mortality_trend")
-        trend_df = df[df['country'] == trend_country]
+        # Remove duplicate selectbox, using the one from the top of the page
+        # trend_country = st.selectbox("Select Country for Mortality Trend", df['country'].unique(), index=df['country'].tolist().index('Afghanistan'), key="mortality_trend")
+        # trend_df = df[df['country'] == trend_country]
         col1, col2, col3 = st.columns(3)
         with col2:
             st.metric("Average Mortality Rate", f"{trend_df['tb_mortality_100k'].mean():.2f} per 100k")
@@ -320,7 +403,7 @@ elif selected_page == "Trends Over Time":
         )
         st.plotly_chart(fig_mortality)
 
-        st.subheader("Mortality vs. Incidence")
+        st.subheader("Mortality vs. Incidence (Scatter Plot)")
         scatter_fig = px.scatter(
             trend_df,
             x='tb_incidence_100k',
@@ -331,7 +414,27 @@ elif selected_page == "Trends Over Time":
         )
         st.plotly_chart(scatter_fig)
 
-    st.subheader("Incidence vs. Mortality (Dual Axis)")
+        st.subheader("Detection Rate Trend")
+        fig_detection = px.line(
+            trend_df,
+            x='year',
+            y='detection_rate',
+            title=f"TB Detection Rate Trend in {trend_country}",
+            color_discrete_sequence=["#00CC96"]
+        )
+        st.plotly_chart(fig_detection)
+
+        st.subheader("HIV in TB Trend")
+        fig_hiv = px.line(
+            trend_df,
+            x='year',
+            y='hiv_in_tb_percent',
+            title=f"HIV Percentage in TB Patients Trend in {trend_country}",
+            color_discrete_sequence=["#FFA15A"]
+        )
+        st.plotly_chart(fig_hiv)
+
+    st.subheader("Incidence vs. Mortality Over Time (Dual Axis Plot)")
     if not trend_df.empty:
         dual_axis_fig = px.line(
             trend_df,
@@ -356,14 +459,16 @@ elif selected_page == "Regional Analysis":
     st.title("🌎 Regional Analysis")
     selected_region = st.selectbox("Select Region", df['region'].unique())
     regional_df = df[df['region'] == selected_region]
-    st.subheader(f"Key Metrics for {selected_region}")
+    st.subheader(f"Key Metrics for {selected_region} (Normalized)")
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("Total Population", f"{round(df['population'].sum()/23):,}")
+        st.metric("Total Population", f"{round(df['population'].sum()/len(df['year'].unique())):,.0f}")
     with col2:
-        st.metric("Total TB Prevalence", f"{round(df['tb_prevalence_total'].sum()/23):,}")
+        st.metric("Total TB Incidence", f"{round(df['tb_incident_cases_total'].sum()/len(df['year'].unique())):,.0f}")
     with col3:
-        st.metric("Total TB Deaths", f"{round(df['tb_deaths_total'].sum()/23):,}")
+        # Calculate actual deaths for the region
+        region_deaths = (regional_df['tb_mortality_100k'] * regional_df['population'] / 100000).sum() / len(df['year'].unique())
+        st.metric("Total TB Deaths", f"{round(region_deaths):,.0f}")
     st.divider()
 
     with st.expander("What is the purpose of this page?"):
@@ -379,7 +484,7 @@ elif selected_page == "Regional Analysis":
     region_fig = px.bar(
         regional_df,
         x='country',
-        y='tb_prevalence_100k',
+        y='tb_incidence_100k',
         color='country',
         title=f"TB Prevalence in {selected_region}",
         color_discrete_sequence=px.colors.sequential.Aggrnyl
@@ -393,16 +498,19 @@ elif selected_page == "Regional Analysis":
         y='tb_mortality_100k',
         color='country',
         title=f"TB Mortality in {selected_region}",
-        color_discrete_sequence=px.colors.sequential.OrRd
+        color_discrete_sequence=px.colors.sequential.OrRd # Keep OrRd for mortality for distinction
     )
     st.plotly_chart(region_mortality_fig)
 
     st.subheader(f"TB Deaths by Country in {selected_region} (Pie Chart)")
+    # Calculate actual deaths for each country
+    regional_df['actual_deaths'] = regional_df['tb_mortality_100k'] * regional_df['population'] / 100000
     pie_deaths = px.pie(
         regional_df,
         names='country',
-        values='tb_deaths_total',
-        title=f"TB Deaths Distribution in {selected_region}"
+        values='actual_deaths',
+        title=f"TB Deaths Distribution in {selected_region}",
+        color_discrete_sequence=px.colors.qualitative.Pastel # Use Pastel qualitative palette
     )
     st.plotly_chart(pie_deaths)
     st.divider()
@@ -412,22 +520,46 @@ elif selected_page == "Regional Analysis":
         regional_df,
         y='tb_incidence_100k',
         points="all",
-        title=f"TB Incidence per 100k in {selected_region} (Box Plot)"
+        title=f"TB Incidence per 100k in {selected_region} (Box Plot)",
+        color_discrete_sequence=px.colors.qualitative.Plotly # Use Plotly qualitative palette
     )
     st.plotly_chart(box_incidence)
+
+    st.subheader(f"Average TB Incidence Trend in {selected_region}")
+    # Calculate average incidence per year for the selected region
+    regional_yearly_avg = regional_df.groupby('year')['tb_incidence_100k'].mean().reset_index()
+    region_trend_fig = px.line(
+        regional_yearly_avg,
+        x='year',
+        y='tb_incidence_100k',
+        title=f"Average TB Incidence Trend in {selected_region}",
+        labels={"tb_incidence_100k": "Average Incidence per 100k", "year": "Year"}
+    )
+    st.plotly_chart(region_trend_fig)
 
 elif selected_page == "Country Profiles":
     st.title("🌍 Country Profiles")
 
+    # Use a single selectbox for the entire Country Profiles page
+    selected_country_profile = st.selectbox(
+        "Select a Country",
+        df['country'].unique(),
+        index=df['country'].tolist().index('Afghanistan'),
+        key="country_profile_selection"
+    )
+    # Filter the main dataframe for the selected country
+    country_df = df[df['country'] == selected_country_profile]
+
     tab1, tab2 = st.tabs(["Detailed Statistics", "Trends"])
 
     with tab1:
-        selected_country_profile = st.selectbox("Select a Country", df['country'].unique())
-        country_df = df[df['country'] == selected_country_profile]
+        # Remove duplicate selectbox, using the one from the top of the page
+        # selected_country_profile = st.selectbox("Select a Country", df['country'].unique(), index=df['country'].tolist().index('Afghanistan'))
+        # country_df = df[df['country'] == selected_country_profile]
         with st.expander("What is the purpose of this page?"):
             st.write(f"""
             The Country Profiles page provides a deep dive into all available TB statistics for **{selected_country_profile}**. Features include:
-            - **Key Metrics:** Normalized annual population, TB prevalence, and deaths for the country.
+            - **Key Metrics:** Normalized annual population, TB prevalence, incidence, and deaths for the country.
             - **Detailed Table:** All raw data for the country.
             - **Pie & Bar Charts:** Visualize the proportion and totals of prevalence, incidence, and deaths.
             Use this page to get a comprehensive view of TB in a single country.
@@ -438,24 +570,25 @@ elif selected_page == "Country Profiles":
         with col1:
             st.metric(
                 "Total Population",
-                f"{round(country_df['population'].sum()/23):,}",
-                help="Normalized to a single year (data spans 23 years) to avoid unrealistic totals."
+                f"{round(country_df['population'].sum()/len(country_df['year'].unique())):,.0f}",
+                help="Normalized to a single year (data spans multiple years) to avoid unrealistic totals."
             )
         with col2:
-            st.metric("Total TB Prevalence", f"{country_df['tb_prevalence_total'].sum():,}")
+            st.metric("Total TB Incidence", f"{round(country_df['tb_incident_cases_total'].sum()/len(country_df['year'].unique())):,.0f}", help="Normalized to a single year (data spans multiple years) to avoid unrealistic totals.")
         with col3:
-            st.metric("Total TB Deaths", f"{country_df['tb_deaths_total'].sum():,}")
+            # Calculate actual deaths for the country
+            country_deaths = (country_df['tb_mortality_100k'] * country_df['population'] / 100000).sum() / len(country_df['year'].unique())
+            st.metric("Total TB Deaths", f"{round(country_deaths):,.0f}", help="Normalized to a single year (data spans multiple years) to avoid unrealistic totals.")
         st.divider()
 
         st.subheader(f"Detailed Statistics for {selected_country_profile}")
         st.write(country_df)
-        st.subheader("Proportion of TB Metrics")
+        st.subheader("Proportion of TB Metrics (Normalized)")
         pie_data = {
-            "Metric": ["Prevalence", "Incidence", "Mortality"],
+            "Metric": ["Incidence", "Deaths"],
             "Value": [
-                country_df['tb_prevalence_total'].sum(),
-                country_df['tb_incident_cases_total'].sum(),
-                country_df['tb_deaths_total'].sum()
+                country_df['tb_incident_cases_total'].sum() / len(country_df['year'].unique()),
+                (country_df['tb_mortality_100k'] * country_df['population'] / 100000).sum() / len(country_df['year'].unique())
             ]
         }
         pie_fig = px.pie(
@@ -469,21 +602,26 @@ elif selected_page == "Country Profiles":
 
         st.subheader("Total TB Metrics (Bar Chart)")
         bar_totals = px.bar(
-            x=["Prevalence", "Incidence", "Deaths"],
-            y=[country_df['tb_prevalence_total'].sum(), country_df['tb_incident_cases_total'].sum(), country_df['tb_deaths_total'].sum()],
+            x=["Incidence", "Deaths"],
+            y=[
+                country_df['tb_incident_cases_total'].sum() / len(country_df['year'].unique()),
+                (country_df['tb_mortality_100k'] * country_df['population'] / 100000).sum() / len(country_df['year'].unique())
+            ],
             labels={"x": "Metric", "y": "Total"},
             title=f"Total TB Metrics for {selected_country_profile}"
         )
         st.plotly_chart(bar_totals)
 
     with tab2:
-        selected_country_profile = st.selectbox("Select a Country for Trends", df['country'].unique(), key="country_trends")
-        country_df = df[df['country'] == selected_country_profile]
+        # Remove duplicate selectbox, using the one from the top of the page
+        # selected_country_profile = st.selectbox("Select a Country for Trends", df['country'].unique(), index=df['country'].tolist().index('Afghanistan'), key="country_trends")
+        # country_df = df[df['country'] == selected_country_profile]
         with st.expander("What is the purpose of this page?"):
             st.write(f"""
             The Trends tab in Country Profiles shows how TB metrics have changed over time for **{selected_country_profile}**. Features include:
             - **Key Metrics:** Normalized annual totals and averages for the country.
             - **Trends & Yearly Charts:** Line, bar, and scatter plots for time series and correlation analysis.
+            - **Additional Trends:** Plots for detection rate and HIV in TB percentage over time.
             Use this tab to analyze progress, setbacks, and patterns in TB control for the selected country.
             """)
 
@@ -492,24 +630,22 @@ elif selected_page == "Country Profiles":
         with col1:
             st.metric(
                 "Total Population",
-                f"{round(country_df['population'].sum()/23):,}",
-                help="Normalized to a single year (data spans 23 years) to avoid unrealistic totals."
+                f"{round(country_df['population'].sum()/len(country_df['year'].unique())):,.0f}",
+                help="Normalized to a single year (data spans multiple years) to avoid unrealistic totals."
             )
         with col2:
-            st.metric(
-                "Total TB Prevalence",
-                f"{round(country_df['tb_prevalence_total'].sum()/23):,}",
-                help="Normalized to a single year (data spans 23 years) to avoid unrealistic totals."
-            )
+            st.metric("Total TB Incidence", f"{round(country_df['tb_incident_cases_total'].sum()/len(country_df['year'].unique())):,.0f}", help="Normalized to a single year (data spans multiple years) to avoid unrealistic totals.")
         with col3:
-            st.metric("Total TB Deaths", f"{country_df['tb_deaths_total'].sum():,}")
+            # Calculate actual deaths for the country
+            country_deaths = (country_df['tb_mortality_100k'] * country_df['population'] / 100000).sum() / len(country_df['year'].unique())
+            st.metric("Total TB Deaths", f"{round(country_deaths):,.0f}", help="Normalized to a single year (data spans multiple years) to avoid unrealistic totals.")
         st.divider()
 
         st.subheader(f"Trends for {selected_country_profile}")
         fig_trends = px.line(
             country_df,
             x='year',
-            y=['tb_prevalence_100k', 'tb_mortality_100k', 'tb_incidence_100k'],
+            y=['tb_incidence_100k', 'tb_mortality_100k', 'tb_incident_cases_total'],
             title=f"Trends in TB Statistics for {selected_country_profile}",
             labels={"value": "Rate per 100k", "variable": "Metric"},
             color_discrete_sequence=px.colors.qualitative.Set1
@@ -517,17 +653,17 @@ elif selected_page == "Country Profiles":
         st.plotly_chart(fig_trends)
         col1, col2, col3 = st.columns(3)
         with col1:
-            st.metric("Average Prevalence Rate", f"{country_df['tb_prevalence_100k'].mean():.2f} per 100k")
+            st.metric("Average Prevalence Rate", f"{country_df['tb_incidence_100k'].mean():.2f} per 100k")
         with col2:
             st.metric("Average Mortality Rate", f"{country_df['tb_mortality_100k'].mean():.2f} per 100k")
         with col3:
-            st.metric("Average Incidence Rate", f"{country_df['tb_incidence_100k'].mean():.2f} per 100k")
+            st.metric("Average Incidence Rate", f"{country_df['tb_incident_cases_total'].mean():.2f} per 100k")
 
         st.subheader("Yearly Trends")
         bar_trends = px.bar(
             country_df,
             x='year',
-            y=['tb_prevalence_100k', 'tb_mortality_100k', 'tb_incidence_100k'],
+            y=['tb_incidence_100k', 'tb_mortality_100k', 'tb_incident_cases_total'],
             title=f"Yearly Trends in TB Metrics for {selected_country_profile}",
             labels={"value": "Rate per 100k", "variable": "Metric"},
             barmode='group',
@@ -538,13 +674,33 @@ elif selected_page == "Country Profiles":
         st.subheader("Prevalence vs. Incidence Over Years (Scatter Plot)")
         scatter_profile = px.scatter(
             country_df,
-            x='tb_prevalence_100k',
-            y='tb_incidence_100k',
+            x='tb_incidence_100k',
+            y='tb_incident_cases_total',
             color='year',
             title=f"Prevalence vs. Incidence Over Years in {selected_country_profile}",
             labels={"x": "Prevalence per 100k", "y": "Incidence per 100k"}
         )
         st.plotly_chart(scatter_profile)
+
+        st.subheader("Detection Rate Trend")
+        fig_detection_profile = px.line(
+            country_df,
+            x='year',
+            y='detection_rate',
+            title=f"TB Detection Rate Trend in {selected_country_profile}",
+            color_discrete_sequence=["#00CC96"]
+        )
+        st.plotly_chart(fig_detection_profile)
+
+        st.subheader("HIV in TB Trend")
+        fig_hiv_profile = px.line(
+            country_df,
+            x='year',
+            y='hiv_in_tb_percent',
+            title=f"HIV Percentage in TB Patients Trend in {selected_country_profile}",
+            color_discrete_sequence=["#FFA15A"]
+        )
+        st.plotly_chart(fig_hiv_profile)
 
 elif selected_page == "Interactive Data Explorer":
     st.title("🔍 Interactive Data Explorer")
@@ -557,10 +713,21 @@ elif selected_page == "Interactive Data Explorer":
         Use this page for custom analysis, hypothesis testing, or to answer specific questions about the data.
         """)
 
-    selected_region = st.multiselect("Select Region", df['region'].unique(), default=df['region'].unique())
+    # Add more filtering options
+    col1, col2 = st.columns(2)
+    with col1:
+        selected_region = st.multiselect("Select Region", df['region'].unique(), default=df['region'].unique())
+    with col2:
+        selected_countries_explorer = st.multiselect("Select Countries", df['country'].unique(), default=[])
+
     selected_years = st.slider("Select Year Range", int(df['year'].min()), int(df['year'].max()), (int(df['year'].min()), int(df['year'].max())))
 
+    # Apply initial filters
     explorer_df = df[(df['region'].isin(selected_region)) & (df['year'].between(*selected_years))]
+
+    # Apply country filter if any countries are selected
+    if selected_countries_explorer:
+        explorer_df = explorer_df[explorer_df['country'].isin(selected_countries_explorer)]
 
     with st.expander("What do these metrics mean?"):
         st.write("""
@@ -571,7 +738,7 @@ elif selected_page == "Interactive Data Explorer":
         """)
 
     st.subheader("Custom Query Results")
-    query = st.text_area("Enter a custom query (e.g., `tb_prevalence_100k > 100`)")
+    query = st.text_area("Enter a custom query (e.g., `tb_incidence_100k > 100`). Available columns: " + ", ".join(explorer_df.columns))
     if query:
         try:
             if any(keyword in query.lower() for keyword in ["import", "exec", "eval", "os.", "sys."]):
@@ -585,7 +752,7 @@ elif selected_page == "Interactive Data Explorer":
                 region_fig = px.bar(
                     query_results.groupby('region').sum().reset_index(),
                     x='region',
-                    y='tb_prevalence_total',
+                    y='tb_incident_cases_total',
                     title="TB Prevalence by Region",
                     color_discrete_sequence=px.colors.sequential.Viridis
                 )
@@ -606,11 +773,13 @@ elif selected_page == "Interactive Data Explorer":
                 st.plotly_chart(bubble_fig)
 
                 st.markdown("### Stacked Bar Chart for Regional TB Statistics")
-                stacked_data = query_results.groupby('region')[['tb_prevalence_total', 'tb_incident_cases_total', 'tb_deaths_total']].sum().reset_index()
+                # Calculate actual deaths for each region
+                query_results['actual_deaths'] = query_results['tb_mortality_100k'] * query_results['population'] / 100000
+                stacked_data = query_results.groupby('region')[['tb_incident_cases_total', 'actual_deaths']].sum().reset_index()
                 stacked_fig = px.bar(
                     stacked_data,
                     x='region',
-                    y=['tb_prevalence_total', 'tb_incident_cases_total', 'tb_deaths_total'],
+                    y=['tb_incident_cases_total', 'actual_deaths'],
                     title="Stacked Bar Chart for Regional TB Statistics",
                     labels={"value": "Count", "variable": "Metric"},
                     color_discrete_sequence=px.colors.qualitative.Pastel
@@ -620,14 +789,50 @@ elif selected_page == "Interactive Data Explorer":
                 st.warning("No data matches the query. Please adjust your query and try again.")
         except Exception as e:
             st.error(f"Error in query: {e}. Please ensure your query is valid and uses column names correctly.")
+
+    # Allow users to create custom plots
+    st.subheader("Create Custom Plot")
+    if not explorer_df.empty:
+        plot_type = st.selectbox("Select Plot Type", ["scatter", "line", "bar", "histogram", "box", "violin"])
+        all_columns = explorer_df.columns.tolist()
+
+        if plot_type in ["scatter", "line", "bar"]:
+            col_x, col_y = st.columns(2)
+            with col_x:
+                x_axis = st.selectbox("Select X-axis", all_columns)
+            with col_y:
+                y_axis = st.selectbox("Select Y-axis", all_columns)
+
+            if plot_type == "scatter":
+                custom_fig = px.scatter(explorer_df, x=x_axis, y=y_axis, hover_name='country', title=f"{y_axis} vs. {x_axis}")
+            elif plot_type == "line":
+                custom_fig = px.line(explorer_df, x=x_axis, y=y_axis, color='country', title=f"{y_axis} over {x_axis}")
+            elif plot_type == "bar":
+                 custom_fig = px.bar(explorer_df, x=x_axis, y=y_axis, title=f"{y_axis} by {x_axis}")
+            st.plotly_chart(custom_fig, use_container_width=True)
+
+        elif plot_type in ["histogram", "box", "violin"]:
+            selected_column = st.selectbox("Select Column", all_columns)
+            if plot_type == "histogram":
+                custom_fig = px.histogram(explorer_df, x=selected_column, title=f"Distribution of {selected_column}")
+            elif plot_type == "box":
+                custom_fig = px.box(explorer_df, y=selected_column, title=f"Distribution of {selected_column} (Box Plot)")
+            elif plot_type == "violin":
+                 custom_fig = px.violin(explorer_df, y=selected_column, box=True, points="all", title=f"Distribution of {selected_column} (Violin Plot)")
+            st.plotly_chart(custom_fig, use_container_width=True)
+    else:
+        st.warning("No data available for plotting. Please adjust your filters or query.")
+
+    st.subheader("Filtered Data Table")
     if st.button("Show Filtered Data"):
         st.write(explorer_df)
 
+    # Bring back the deleted plots
     st.subheader("TB Prevalence by Region (Violin Plot)")
     violin_fig = px.violin(
         explorer_df,
         x='region',
-        y='tb_prevalence_100k',
+        y='tb_incidence_100k',
         box=True,
         points="all",
         title="TB Prevalence by Region (Violin Plot)"
@@ -637,11 +842,11 @@ elif selected_page == "Interactive Data Explorer":
 
     st.subheader("Average TB Prevalence Over Years (Filtered)")
     if not explorer_df.empty:
-        avg_year = explorer_df.groupby('year')['tb_prevalence_100k'].mean().reset_index()
+        avg_year = explorer_df.groupby('year')['tb_incidence_100k'].mean().reset_index()
         avg_line = px.line(
             avg_year,
             x='year',
-            y='tb_prevalence_100k',
+            y='tb_incidence_100k',
             title="Average TB Prevalence Over Years (Filtered)"
         )
         st.plotly_chart(avg_line)
@@ -663,7 +868,7 @@ elif selected_page == "Documentation":
 
     ## Data Source
     - World Health Organization (WHO)
-    - Data file: `data/TB_Burden_Country.csv`
+    - Data file: `data/combined_tb_data_1990_2023.csv`
 
     ## How to Use
     1. Use the sidebar to navigate between pages.
@@ -672,10 +877,10 @@ elif selected_page == "Documentation":
     4. Use the Interactive Data Explorer for custom queries and advanced analytics.
 
     ## Normalization Note
-    - Most metrics are normalized to a single year (data spans 23 years) to provide realistic annual values and avoid inflated totals.
+    - Most metrics are normalized to a single year (data spans 33 years) to provide realistic annual values and avoid inflated totals.
 
     ## Customization
-    - Add or update data in `data/TB_Burden_Country.csv`.
+    - Add or update data in `data/combined_tb_data_1990_2023.csv`.
     - Modify `app.py` to add new visualizations or analytics as needed.
 
     ## Contact
