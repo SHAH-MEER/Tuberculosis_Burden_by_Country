@@ -853,80 +853,27 @@ elif selected_page == "Interactive Data Explorer":
         st.plotly_chart(avg_line)
 
 elif selected_page == "Country Similarity & Correlation":
-    st.title("🤝 Country Similarity & Correlation")
+    st.title("🌎 Country Similarity Analysis")
     st.markdown("""
-    This page explores the relationships and similarities between countries based on various TB metrics using analytical techniques.
+    This page allows you to explore the similarity between countries based on their TB profiles. 
+    Using key TB metrics from the most recent year, we calculate cosine similarity to identify countries with similar patterns in incidence, mortality, detection, and HIV co-infection rates.
     """)
-
-    # Correlation Analysis
-    st.subheader("Correlation Analysis of TB Metrics")
-
-    # Select relevant numerical columns for correlation analysis
-    correlation_cols = [
-        'tb_incidence_100k',
-        'tb_incidence_100k_low',
-        'tb_incidence_100k_high',
-        'tb_incident_cases_total',
-        'tb_incident_cases_low',
-        'tb_incident_cases_high',
-        'tb_mortality_100k',
-        'tb_mortality_100k_low',
-        'tb_mortality_100k_high',
-        'hiv_in_tb_percent',
-        'hiv_in_tb_percent_lo',
-        'hiv_in_tb_percent_hi',
-        'detection_rate',
-        'detection_rate_lo',
-        'detection_rate_hi',
-        'population'
-    ]
-
-    # Ensure only selected columns are used and drop rows with any NaN values for correlation calculation
-    correlation_df = df[correlation_cols].dropna()
-
-    if not correlation_df.empty:
-        # Calculate the correlation matrix
-        corr_matrix = correlation_df.corr()
-
-        # Display the correlation matrix as a heatmap
-        corr_heatmap = px.imshow(
-            corr_matrix,
-            text_auto=True, # Display correlation values on the heatmap
-            aspect="auto",
-            color_continuous_scale="Viridis",
-            title="Correlation Matrix of TB Metrics"
-        )
-        st.plotly_chart(corr_heatmap, use_container_width=True)
-    else:
-        st.warning("Not enough data to calculate correlation matrix after handling missing values.")
-
-    st.divider()
 
     # Country Similarity Analysis
     st.subheader("Country Similarity Analysis")
+    # The markdown explanation for similarity is updated above in the main page markdown.
 
     # Select relevant numerical features for similarity calculation
-    # Using the same columns as correlation for consistency, excluding population for similarity
     similarity_cols = [
         'tb_incidence_100k',
-        'tb_incidence_100k_low',
-        'tb_incidence_100k_high',
-        'tb_incident_cases_total',
-        'tb_incident_cases_low',
-        'tb_incident_cases_high',
         'tb_mortality_100k',
-        'tb_mortality_100k_low',
-        'tb_mortality_100k_high',
         'hiv_in_tb_percent',
-        'hiv_in_tb_percent_lo',
-        'hiv_in_tb_percent_hi',
         'detection_rate',
-        'detection_rate_lo',
-        'detection_rate_hi'
     ]
 
-    # Prepare data for similarity - group by country and take the mean of selected columns
-    country_features = df.groupby('country')[similarity_cols].mean()
+    # Prepare data for similarity - use data from the most recent year
+    latest_year = df['year'].max()
+    country_features = df[df['year'] == latest_year][['country'] + similarity_cols].set_index('country')
 
     # Drop countries with any NaN values in the selected features
     country_features = country_features.dropna()
@@ -942,7 +889,7 @@ elif selected_page == "Country Similarity & Correlation":
             columns=country_features.index
         )
 
-        st.write("Select a country to find similar countries based on the selected metrics.")
+        st.write(f"Select a country to find others with similar TB profiles based on metrics from the most recent year ({latest_year}).")
 
         # Dropdown to select a country
         selected_country_similarity = st.selectbox(
@@ -962,7 +909,55 @@ elif selected_page == "Country Similarity & Correlation":
 
             # Display the top N similar countries
             num_similar_countries = st.slider("Number of similar countries to show", 5, 20, 10)
-            st.write(sorted_similar_countries.head(num_similar_countries))
+            # Display similar countries in a formatted way
+            similar_countries_df = sorted_similar_countries.head(num_similar_countries).reset_index()
+            similar_countries_df.columns = ['Country', 'Cosine Similarity Score']
+            st.dataframe(similar_countries_df)
+
+            # Add visual comparison: Bar chart comparing metrics of selected country and similar countries
+            st.subheader("Metric Comparison with Similar Countries")
+
+            # Get data for the selected country and the top similar countries for the latest year
+            compare_countries = [selected_country_similarity] + similar_countries_df['Country'].tolist()
+            compare_df = df[(df['year'] == latest_year) & (df['country'].isin(compare_countries))]
+
+            if not compare_df.empty:
+                # Melt the DataFrame to long format for easy plotting
+                compare_melted = compare_df.melt(id_vars=['country', 'year'], value_vars=similarity_cols, var_name='Metric', value_name='Value')
+
+                # Create a grouped bar chart
+                comparison_bar = px.bar(
+                    compare_melted,
+                    x='Metric',
+                    y='Value',
+                    color='country',
+                    barmode='group',
+                    title=f"Comparison of TB Metrics for {selected_country_similarity} and Similar Countries ({latest_year})",
+                    labels={'Value': 'Metric Value'}
+                )
+                st.plotly_chart(comparison_bar, use_container_width=True)
+
+                # Add a Radar Chart for comparison
+                st.subheader("Radar Chart Comparison")
+
+                # Radar chart requires a specific data structure
+                # We already have compare_melted which is in long format, suitable for radar chart
+                radar_chart = px.line_polar(
+                    compare_melted, 
+                    r='Value', 
+                    theta='Metric', 
+                    color='country',
+                    line_close=True,
+                    title=f"Radar Chart of TB Metrics for {selected_country_similarity} and Similar Countries ({latest_year})",
+                    # Add line tension for smoother lines
+                    line_shape='linear'
+                )
+                # Customize radar chart layout
+                radar_chart.update_traces(fill='toself')
+                st.plotly_chart(radar_chart, use_container_width=True)
+
+            else:
+                st.warning("Not enough data to compare metrics for the selected country and similar countries.")
 
     else:
         st.warning("Not enough data to perform similarity analysis after handling missing values.")
