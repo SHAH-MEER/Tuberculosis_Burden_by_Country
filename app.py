@@ -291,46 +291,48 @@ elif selected_page == "Interactive Data Explorer":
 
             query_results = explorer_df.query(query)
             st.write(query_results)
+
+            # Update visuals based on query results
+            if not query_results.empty:
+                st.markdown("### TB Prevalence by Region")
+                region_fig = px.bar(
+                    query_results.groupby('region').sum().reset_index(),
+                    x='region',
+                    y='tb_prevalence_total',
+                    title="TB Prevalence by Region",
+                    color_discrete_sequence=px.colors.sequential.Viridis
+                )
+                st.plotly_chart(region_fig)
+
+                st.markdown("### TB Incidence vs. Mortality")
+                bubble_fig = px.scatter(
+                    query_results,
+                    x='tb_incidence_100k',
+                    y='tb_mortality_100k',
+                    size='population',
+                    color='region',
+                    hover_name='country',
+                    title="TB Incidence vs. Mortality",
+                    size_max=60,
+                    color_discrete_sequence=px.colors.qualitative.Set2
+                )
+                st.plotly_chart(bubble_fig)
+
+                st.markdown("### Stacked Bar Chart for Regional TB Statistics")
+                stacked_data = query_results.groupby('region')[['tb_prevalence_total', 'tb_incident_cases_total', 'tb_deaths_total']].sum().reset_index()
+                stacked_fig = px.bar(
+                    stacked_data,
+                    x='region',
+                    y=['tb_prevalence_total', 'tb_incident_cases_total', 'tb_deaths_total'],
+                    title="Stacked Bar Chart for Regional TB Statistics",
+                    labels={"value": "Count", "variable": "Metric"},
+                    color_discrete_sequence=px.colors.qualitative.Pastel
+                )
+                st.plotly_chart(stacked_fig)
+            else:
+                st.warning("No data matches the query. Please adjust your query and try again.")
         except Exception as e:
             st.error(f"Error in query: {e}. Please ensure your query is valid and uses column names correctly.")
-
-    # Add visuals
-    st.subheader("Visualizations")
-    st.markdown("### TB Prevalence by Region")
-    region_fig = px.bar(
-        explorer_df.groupby('region').sum().reset_index(),
-        x='region',
-        y='tb_prevalence_total',
-        title="TB Prevalence by Region",
-        color_discrete_sequence=px.colors.sequential.Viridis
-    )
-    st.plotly_chart(region_fig)
-
-    st.markdown("### TB Incidence vs. Mortality")
-    bubble_fig = px.scatter(
-        explorer_df,
-        x='tb_incidence_100k',
-        y='tb_mortality_100k',
-        size='population',
-        color='region',
-        hover_name='country',
-        title="TB Incidence vs. Mortality",
-        size_max=60,
-        color_discrete_sequence=px.colors.qualitative.Set2
-    )
-    st.plotly_chart(bubble_fig)
-
-    st.markdown("### Stacked Bar Chart for Regional TB Statistics")
-    stacked_data = explorer_df.groupby('region')[['tb_prevalence_total', 'tb_incident_cases_total', 'tb_deaths_total']].sum().reset_index()
-    stacked_fig = px.bar(
-        stacked_data,
-        x='region',
-        y=['tb_prevalence_total', 'tb_incident_cases_total', 'tb_deaths_total'],
-        title="Stacked Bar Chart for Regional TB Statistics",
-        labels={"value": "Count", "variable": "Metric"},
-        color_discrete_sequence=px.colors.qualitative.Pastel
-    )
-    st.plotly_chart(stacked_fig)
 
 elif selected_page == "Documentation":
     st.title("📚 Documentation")
