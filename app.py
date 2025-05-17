@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+from sklearn.metrics.pairwise import cosine_similarity
 
 
 st.set_page_config(layout="wide")
@@ -46,7 +47,7 @@ df = load_data()
 
 # Sidebar navigation
 st.sidebar.title("Navigation")
-pages = ["Documentation", "Global Overview", "Country Comparison", "Trends Over Time", "Regional Analysis", "Country Profiles", "Interactive Data Explorer"]
+pages = ["Documentation", "Global Overview", "Country Comparison", "Trends Over Time", "Regional Analysis", "Country Profiles", "Interactive Data Explorer", "Country Similarity & Correlation"]
 selected_page = st.sidebar.radio("Go to", pages)
 
 if selected_page == "Global Overview":
@@ -850,6 +851,121 @@ elif selected_page == "Interactive Data Explorer":
             title="Average TB Prevalence Over Years (Filtered)"
         )
         st.plotly_chart(avg_line)
+
+elif selected_page == "Country Similarity & Correlation":
+    st.title("🤝 Country Similarity & Correlation")
+    st.markdown("""
+    This page explores the relationships and similarities between countries based on various TB metrics using analytical techniques.
+    """)
+
+    # Correlation Analysis
+    st.subheader("Correlation Analysis of TB Metrics")
+
+    # Select relevant numerical columns for correlation analysis
+    correlation_cols = [
+        'tb_incidence_100k',
+        'tb_incidence_100k_low',
+        'tb_incidence_100k_high',
+        'tb_incident_cases_total',
+        'tb_incident_cases_low',
+        'tb_incident_cases_high',
+        'tb_mortality_100k',
+        'tb_mortality_100k_low',
+        'tb_mortality_100k_high',
+        'hiv_in_tb_percent',
+        'hiv_in_tb_percent_lo',
+        'hiv_in_tb_percent_hi',
+        'detection_rate',
+        'detection_rate_lo',
+        'detection_rate_hi',
+        'population'
+    ]
+
+    # Ensure only selected columns are used and drop rows with any NaN values for correlation calculation
+    correlation_df = df[correlation_cols].dropna()
+
+    if not correlation_df.empty:
+        # Calculate the correlation matrix
+        corr_matrix = correlation_df.corr()
+
+        # Display the correlation matrix as a heatmap
+        corr_heatmap = px.imshow(
+            corr_matrix,
+            text_auto=True, # Display correlation values on the heatmap
+            aspect="auto",
+            color_continuous_scale="Viridis",
+            title="Correlation Matrix of TB Metrics"
+        )
+        st.plotly_chart(corr_heatmap, use_container_width=True)
+    else:
+        st.warning("Not enough data to calculate correlation matrix after handling missing values.")
+
+    st.divider()
+
+    # Country Similarity Analysis
+    st.subheader("Country Similarity Analysis")
+
+    # Select relevant numerical features for similarity calculation
+    # Using the same columns as correlation for consistency, excluding population for similarity
+    similarity_cols = [
+        'tb_incidence_100k',
+        'tb_incidence_100k_low',
+        'tb_incidence_100k_high',
+        'tb_incident_cases_total',
+        'tb_incident_cases_low',
+        'tb_incident_cases_high',
+        'tb_mortality_100k',
+        'tb_mortality_100k_low',
+        'tb_mortality_100k_high',
+        'hiv_in_tb_percent',
+        'hiv_in_tb_percent_lo',
+        'hiv_in_tb_percent_hi',
+        'detection_rate',
+        'detection_rate_lo',
+        'detection_rate_hi'
+    ]
+
+    # Prepare data for similarity - group by country and take the mean of selected columns
+    country_features = df.groupby('country')[similarity_cols].mean()
+
+    # Drop countries with any NaN values in the selected features
+    country_features = country_features.dropna()
+
+    if not country_features.empty:
+        # Calculate cosine similarity matrix
+        cosine_sim_matrix = cosine_similarity(country_features)
+
+        # Convert to a pandas DataFrame for easier handling
+        cosine_sim_df = pd.DataFrame(
+            cosine_sim_matrix,
+            index=country_features.index,
+            columns=country_features.index
+        )
+
+        st.write("Select a country to find similar countries based on the selected metrics.")
+
+        # Dropdown to select a country
+        selected_country_similarity = st.selectbox(
+            "Select a Country",
+            cosine_sim_df.index.unique(),
+            key="similarity_country_selection"
+        )
+
+        if selected_country_similarity:
+            # Get similarity scores for the selected country
+            similarity_scores = cosine_sim_df[selected_country_similarity]
+
+            # Sort countries by similarity score (excluding the selected country itself)
+            sorted_similar_countries = similarity_scores.sort_values(ascending=False).drop(selected_country_similarity)
+
+            st.subheader(f"Countries Most Similar to {selected_country_similarity}")
+
+            # Display the top N similar countries
+            num_similar_countries = st.slider("Number of similar countries to show", 5, 20, 10)
+            st.write(sorted_similar_countries.head(num_similar_countries))
+
+    else:
+        st.warning("Not enough data to perform similarity analysis after handling missing values.")
 
 elif selected_page == "Documentation":
     st.title("📚 Documentation")
