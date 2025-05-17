@@ -1,0 +1,83 @@
+# Core data analysis
+pandas
+numpy
+polars
+openpyxl
+pyjanitor
+pandera
+
+# Visualization
+matplotlib
+seaborn
+plotly
+altair
+bokeh
+missingno
+folium
+streamlit_folium
+
+# Machine learning
+scikit-learn
+xgboost
+lightgbm
+catboost
+mlxtend
+statsmodels
+imbalanced-learn
+
+# Model evaluation and interpretability
+shap
+lime
+
+# Feature engineering
+feature-engine
+category_encoders
+
+# Time series analysis
+prophet
+pmdarima
+
+# Natural language processing
+nltk
+spacy
+
+# Data I/O and manipulation
+requests
+beautifulsoup4
+sqlalchemy
+pymongo
+pyarrow
+fastparquet
+
+# Experiment tracking
+mlflow
+
+# Utilities
+tqdm
+joblib
+fuzzywuzzy
+rapidfuzz
+great_expectations
+
+# Interactive apps
+streamlit
+streamlit-aggrid
+streamlit-option-menu
+streamlit-ace
+streamlit-extras
+streamlit_folium
+gradio
+
+# Jupyter functionality
+jupyter
+ipykernel
+ipywidgets
+jupyterlab
+
+#APIs
+yfinance
+
+# Efficiency and utils
+geopy
+watchdog
+lxml
