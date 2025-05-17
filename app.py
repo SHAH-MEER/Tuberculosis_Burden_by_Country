@@ -129,6 +129,33 @@ if selected_page == "Global Overview":
     )
     st.plotly_chart(top_bar)
 
+    # Add a box plot for TB Prevalence distribution
+    st.subheader("Distribution of TB Prevalence (Box Plot)")
+    box_fig = px.box(
+        df,
+        x='region',
+        y='tb_prevalence_100k',
+        color='region',
+        title="TB Prevalence per 100k by Region (Box Plot)",
+        points="all"
+    )
+    st.plotly_chart(box_fig)
+    st.divider()
+
+    # Add a scatter plot for TB Prevalence vs. Mortality
+    st.subheader("Prevalence vs. Mortality (Scatter Plot)")
+    scatter_fig = px.scatter(
+        df,
+        x='tb_prevalence_100k',
+        y='tb_mortality_100k',
+        color='region',
+        hover_name='country',
+        title="TB Prevalence vs. Mortality by Country",
+        size='population',
+        size_max=40
+    )
+    st.plotly_chart(scatter_fig)
+
 elif selected_page == "Country Comparison":
     st.title("📊 Country Comparison")
     # Metrics at the top
@@ -186,6 +213,29 @@ elif selected_page == "Country Comparison":
         color_discrete_sequence=px.colors.sequential.Cividis
     )
     st.plotly_chart(fig2)
+
+    # Add a line chart for TB Prevalence trend for selected countries
+    st.subheader("TB Prevalence Trend (Line Chart)")
+    if not filtered_df.empty:
+        line_fig = px.line(
+            df[df['country'].isin(selected_country)],
+            x='year',
+            y='tb_prevalence_100k',
+            color='country',
+            title="TB Prevalence Trend for Selected Countries"
+        )
+        st.plotly_chart(line_fig)
+    st.divider()
+
+    # Add a heatmap for TB Prevalence by country and year
+    st.subheader("TB Prevalence Heatmap")
+    heatmap_data = df[df['country'].isin(selected_country)].pivot_table(index='country', columns='year', values='tb_prevalence_100k')
+    heatmap_fig = px.imshow(
+        heatmap_data,
+        labels=dict(x="Year", y="Country", color="Prevalence per 100k"),
+        title="TB Prevalence Heatmap (Country vs Year)"
+    )
+    st.plotly_chart(heatmap_fig)
 
 elif selected_page == "Trends Over Time":
     st.title("📈 Trends Over Time")
@@ -272,6 +322,29 @@ elif selected_page == "Trends Over Time":
         )
         st.plotly_chart(scatter_fig)
 
+    # Add a dual-axis line chart for Incidence and Mortality
+    st.subheader("Incidence vs. Mortality (Dual Axis)")
+    if not trend_df.empty:
+        dual_axis_fig = px.line(
+            trend_df,
+            x='year',
+            y=['tb_incidence_100k', 'tb_mortality_100k'],
+            title=f"Incidence vs. Mortality Over Time in {trend_country}",
+            labels={"value": "Rate per 100k", "variable": "Metric"}
+        )
+        st.plotly_chart(dual_axis_fig)
+    st.divider()
+
+    # Add a histogram for TB Incidence
+    st.subheader("Incidence Rate Distribution (Histogram)")
+    hist_fig = px.histogram(
+        trend_df,
+        x='tb_incidence_100k',
+        nbins=20,
+        title=f"Distribution of TB Incidence Rates in {trend_country}"
+    )
+    st.plotly_chart(hist_fig)
+
 elif selected_page == "Regional Analysis":
     st.title("🌎 Regional Analysis")
     selected_region = st.selectbox("Select Region", df['region'].unique())
@@ -308,6 +381,27 @@ elif selected_page == "Regional Analysis":
         color_discrete_sequence=px.colors.sequential.OrRd
     )
     st.plotly_chart(region_mortality_fig)
+
+    # Add a pie chart for TB Deaths by country in the region
+    st.subheader(f"TB Deaths by Country in {selected_region} (Pie Chart)")
+    pie_deaths = px.pie(
+        regional_df,
+        names='country',
+        values='tb_deaths_total',
+        title=f"TB Deaths Distribution in {selected_region}"
+    )
+    st.plotly_chart(pie_deaths)
+    st.divider()
+
+    # Add a box plot for TB Incidence in the region
+    st.subheader(f"TB Incidence Distribution in {selected_region} (Box Plot)")
+    box_incidence = px.box(
+        regional_df,
+        y='tb_incidence_100k',
+        points="all",
+        title=f"TB Incidence per 100k in {selected_region} (Box Plot)"
+    )
+    st.plotly_chart(box_incidence)
 
 elif selected_page == "Country Profiles":
     st.title("🌍 Country Profiles")
@@ -353,6 +447,16 @@ elif selected_page == "Country Profiles":
             color_discrete_sequence=px.colors.qualitative.Pastel
         )
         st.plotly_chart(pie_fig)
+
+        # Add a bar chart for deaths, prevalence, and incidence totals
+        st.subheader("Total TB Metrics (Bar Chart)")
+        bar_totals = px.bar(
+            x=["Prevalence", "Incidence", "Deaths"],
+            y=[country_df['tb_prevalence_total'].sum(), country_df['tb_incident_cases_total'].sum(), country_df['tb_deaths_total'].sum()],
+            labels={"x": "Metric", "y": "Total"},
+            title=f"Total TB Metrics for {selected_country_profile}"
+        )
+        st.plotly_chart(bar_totals)
 
     with tab2:
         selected_country_profile = st.selectbox("Select a Country for Trends", df['country'].unique(), key="country_trends")
@@ -406,6 +510,18 @@ elif selected_page == "Country Profiles":
             color_discrete_sequence=px.colors.qualitative.Set2
         )
         st.plotly_chart(bar_trends)
+
+        # Add a scatter plot for Prevalence vs. Incidence over years
+        st.subheader("Prevalence vs. Incidence Over Years (Scatter Plot)")
+        scatter_profile = px.scatter(
+            country_df,
+            x='tb_prevalence_100k',
+            y='tb_incidence_100k',
+            color='year',
+            title=f"Prevalence vs. Incidence Over Years in {selected_country_profile}",
+            labels={"x": "Prevalence per 100k", "y": "Incidence per 100k"}
+        )
+        st.plotly_chart(scatter_profile)
 
 elif selected_page == "Interactive Data Explorer":
     st.title("🔍 Interactive Data Explorer")
@@ -481,6 +597,32 @@ elif selected_page == "Interactive Data Explorer":
             st.error(f"Error in query: {e}. Please ensure your query is valid and uses column names correctly.")
     if st.button("Show Filtered Data"):
         st.write(explorer_df)
+
+    # Add a violin plot for TB Prevalence by region
+    st.subheader("TB Prevalence by Region (Violin Plot)")
+    violin_fig = px.violin(
+        explorer_df,
+        x='region',
+        y='tb_prevalence_100k',
+        box=True,
+        points="all",
+        title="TB Prevalence by Region (Violin Plot)"
+    )
+    st.plotly_chart(violin_fig)
+    st.divider()
+
+    # Add a line chart for average TB Prevalence over years (filtered)
+    st.subheader("Average TB Prevalence Over Years (Filtered)")
+    if not explorer_df.empty:
+        avg_year = explorer_df.groupby('year')['tb_prevalence_100k'].mean().reset_index()
+        avg_line = px.line(
+            avg_year,
+            x='year',
+            y='tb_prevalence_100k',
+            title="Average TB Prevalence Over Years (Filtered)"
+        )
+        st.plotly_chart(avg_line)
+
 elif selected_page == "Documentation":
     st.title("📚 Documentation")
     st.markdown("""
