@@ -44,6 +44,27 @@ df = load_data()
 # Ensure latitude and longitude columns are added to the DataFrame
 
 
+# Add a custom theme and improve layout aesthetics
+st.markdown(
+    """
+    <style>
+    .main {
+        background-color: #f5f5f5;
+        padding: 20px;
+        border-radius: 10px;
+    }
+    .sidebar .sidebar-content {
+        background-color: #2c3e50;
+        color: white;
+    }
+    h1, h2, h3, h4, h5, h6 {
+        color: #2c3e50;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 # Sidebar filters
 st.sidebar.header("Filter Options")
 years = df['year'].unique()
@@ -58,7 +79,7 @@ filtered_df = df[(df['year'] == selected_year) & (df['country'].isin(selected_co
 # Sidebar navigation
 st.sidebar.title("Navigation")
 # Move the Documentation page to the first position in the navigation
-pages = ["Documentation", "Global Overview", "Country Comparison", "Trends Over Time", "Regional Analysis"]
+pages = ["Documentation", "Global Overview", "Country Comparison", "Trends Over Time", "Regional Analysis", "Country Profiles", "Interactive Data Explorer"]
 selected_page = st.sidebar.radio("Go to", pages)
 
 if selected_page == "Global Overview":
@@ -66,6 +87,16 @@ if selected_page == "Global Overview":
     st.markdown("""
     This page provides a global overview of TB prevalence and mortality.
     """)
+
+    # Display key metrics
+    st.subheader("Global Key Metrics")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Total Population", f"{df['population'].sum():,}")  # Corrected to use actual sum
+    with col2:
+        st.metric("Total TB Prevalence", f"{df['tb_prevalence_total'].sum():,}")
+    with col3:
+        st.metric("Total TB Deaths", f"{df['tb_deaths_total'].sum():,}")
 
     # Update the Plotly map to color the countries instead of using blobs
     st.subheader("Global TB Prevalence Map")
@@ -153,6 +184,44 @@ elif selected_page == "Trends Over Time":
     )
     st.plotly_chart(fig4)
 
+    st.subheader("Heatmap of TB Prevalence by Region and Year")
+    heatmap_data = df.groupby(['region', 'year'])['tb_prevalence_100k'].mean().reset_index()
+    heatmap_fig = px.density_heatmap(
+        heatmap_data,
+        x='year',
+        y='region',
+        z='tb_prevalence_100k',
+        color_continuous_scale=px.colors.sequential.Viridis,
+        title="Heatmap of TB Prevalence by Region and Year"
+    )
+    st.plotly_chart(heatmap_fig)
+
+    st.subheader("Bubble Chart for TB Incidence vs. Mortality")
+    bubble_fig = px.scatter(
+        df,
+        x='tb_incidence_100k',
+        y='tb_mortality_100k',
+        size='population',
+        color='region',
+        hover_name='country',
+        title="Bubble Chart for TB Incidence vs. Mortality",
+        size_max=60,
+        color_discrete_sequence=px.colors.qualitative.Set2
+    )
+    st.plotly_chart(bubble_fig)
+
+    st.subheader("Stacked Bar Chart for Regional TB Statistics")
+    stacked_data = df.groupby('region')[['tb_prevalence_total', 'tb_incident_cases_total', 'tb_deaths_total']].sum().reset_index()
+    stacked_fig = px.bar(
+        stacked_data,
+        x='region',
+        y=['tb_prevalence_total', 'tb_incident_cases_total', 'tb_deaths_total'],
+        title="Stacked Bar Chart for Regional TB Statistics",
+        labels={"value": "Count", "variable": "Metric"},
+        color_discrete_sequence=px.colors.qualitative.Pastel
+    )
+    st.plotly_chart(stacked_fig)
+
 elif selected_page == "Regional Analysis":
     st.title("🌎 Regional Analysis")
     selected_region = st.selectbox("Select Region", df['region'].unique())
@@ -180,6 +249,89 @@ elif selected_page == "Regional Analysis":
     )
     st.plotly_chart(region_mortality_fig)
 
+elif selected_page == "Country Profiles":
+    st.title("🌍 Country Profiles")
+    selected_country_profile = st.selectbox("Select a Country", countries)
+    country_df = df[df['country'] == selected_country_profile]
+
+    st.subheader(f"Detailed Statistics for {selected_country_profile}")
+    st.write(country_df)
+
+    st.subheader(f"Trends for {selected_country_profile}")
+    fig = px.line(
+        country_df,
+        x='year',
+        y=['tb_prevalence_100k', 'tb_mortality_100k', 'tb_incidence_100k'],
+        title=f"Trends in TB Statistics for {selected_country_profile}",
+        labels={"value": "Rate per 100k", "variable": "Metric"},
+        color_discrete_sequence=px.colors.qualitative.Set1
+    )
+    st.plotly_chart(fig)
+
+elif selected_page == "Interactive Data Explorer":
+    st.title("🔍 Interactive Data Explorer")
+    st.markdown("""
+    Use the filters below to explore the dataset interactively.
+    """)
+
+    # Add filters for interactive exploration
+    selected_region = st.multiselect("Select Region", df['region'].unique(), default=df['region'].unique())
+    selected_years = st.slider("Select Year Range", int(df['year'].min()), int(df['year'].max()), (int(df['year'].min()), int(df['year'].max())))
+
+    explorer_df = df[(df['region'].isin(selected_region)) & (df['year'].between(*selected_years))]
+    st.write(explorer_df)
+
+    st.subheader("Custom Query Results")
+    query = st.text_area("Enter a custom query (e.g., `tb_prevalence_100k > 100`)")
+    if query:
+        try:
+            # Validate the query string before execution
+            if any(keyword in query.lower() for keyword in ["import", "exec", "eval", "os.", "sys."]):
+                raise ValueError("Invalid query: Potentially unsafe operations detected.")
+
+            query_results = explorer_df.query(query)
+            st.write(query_results)
+        except Exception as e:
+            st.error(f"Error in query: {e}. Please ensure your query is valid and uses column names correctly.")
+
+    # Add visuals
+    st.subheader("Visualizations")
+    st.markdown("### TB Prevalence by Region")
+    region_fig = px.bar(
+        explorer_df.groupby('region').sum().reset_index(),
+        x='region',
+        y='tb_prevalence_total',
+        title="TB Prevalence by Region",
+        color_discrete_sequence=px.colors.sequential.Viridis
+    )
+    st.plotly_chart(region_fig)
+
+    st.markdown("### TB Incidence vs. Mortality")
+    bubble_fig = px.scatter(
+        explorer_df,
+        x='tb_incidence_100k',
+        y='tb_mortality_100k',
+        size='population',
+        color='region',
+        hover_name='country',
+        title="TB Incidence vs. Mortality",
+        size_max=60,
+        color_discrete_sequence=px.colors.qualitative.Set2
+    )
+    st.plotly_chart(bubble_fig)
+
+    st.markdown("### Stacked Bar Chart for Regional TB Statistics")
+    stacked_data = explorer_df.groupby('region')[['tb_prevalence_total', 'tb_incident_cases_total', 'tb_deaths_total']].sum().reset_index()
+    stacked_fig = px.bar(
+        stacked_data,
+        x='region',
+        y=['tb_prevalence_total', 'tb_incident_cases_total', 'tb_deaths_total'],
+        title="Stacked Bar Chart for Regional TB Statistics",
+        labels={"value": "Count", "variable": "Metric"},
+        color_discrete_sequence=px.colors.qualitative.Pastel
+    )
+    st.plotly_chart(stacked_fig)
+
 elif selected_page == "Documentation":
     st.title("📚 Documentation")
     st.markdown("""
@@ -192,11 +344,14 @@ elif selected_page == "Documentation":
     - **Country Comparison:** Bar charts comparing TB incidence and mortality across selected countries.
     - **Trends Over Time:** Line charts showing TB incidence trends for a selected country.
     - **Regional Analysis:** Bar charts analyzing TB prevalence and mortality by region.
+    - **Country Profiles:** Detailed statistics and trends for individual countries.
+    - **Interactive Data Explorer:** Explore the dataset interactively with custom queries.
 
     ### Recent Updates:
     - **[May 2025]** Added a Plotly-based interactive map for the Global Overview page.
     - **[May 2025]** Integrated geocoding to fetch latitude and longitude for countries.
-    - **[May 2025]** Added a Documentation page to track updates and features.
+    - **[May 2025]** Added Country Profiles and Interactive Data Explorer pages.
+    - **[May 2025]** Added heatmap, bubble chart, and stacked bar chart visuals.
 
     ### How to Use:
     1. Use the sidebar to navigate between pages.
@@ -209,3 +364,5 @@ elif selected_page == "Documentation":
     ### Contact:
     For questions or feedback, please contact [shahmeershahzad67@gmail.com].
     """)
+
+
