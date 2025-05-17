@@ -64,23 +64,19 @@ selected_page = st.sidebar.radio("Go to", pages)
 if selected_page == "Global Overview":
     st.title("🌍 Global Overview")
     st.markdown("""
-if selected_page == "Global Overview":
-    st.title("🌍 Global Overview")
-    st.markdown("""
     This page provides a global overview of TB prevalence and mortality.
     """)
 
-    # Create a Plotly map for TB prevalence
+    # Update the Plotly map to color the countries instead of using blobs
     st.subheader("Global TB Prevalence Map")
-    map_fig = px.scatter_geo(
+    map_fig = px.choropleth(
         df,
         locations="iso3",
         color="tb_prevalence_100k",
         hover_name="country",
-        size="tb_prevalence_100k",
-        projection="natural earth",
-        title="Global TB Prevalence per 100k Population",
-        color_continuous_scale=px.colors.sequential.Plasma
+        projection="equirectangular",  # Flat projection
+        title="Global TB Prevalence by Country",
+        color_continuous_scale=px.colors.sequential.Magma_r,
     )
     st.plotly_chart(map_fig)
 
@@ -211,5 +207,5 @@ elif selected_page == "Documentation":
     - World Health Organization (WHO)
 
     ### Contact:
-    For questions or feedback, please contact [your_email@example.com].
+    For questions or feedback, please contact [shahmeershahzad67@gmail.com].
     """)
