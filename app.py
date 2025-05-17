@@ -65,20 +65,8 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Sidebar filters
-st.sidebar.header("Filter Options")
-years = df['year'].unique()
-countries = df['country'].unique()
-
-selected_year = st.sidebar.selectbox("Select Year", sorted(years, reverse=True))
-selected_country = st.sidebar.multiselect("Select Country", countries, default=["India", "Pakistan", "China"])
-
-# Filtered data
-filtered_df = df[(df['year'] == selected_year) & (df['country'].isin(selected_country))]
-
 # Sidebar navigation
 st.sidebar.title("Navigation")
-# Move the Documentation page to the first position in the navigation
 pages = ["Documentation", "Global Overview", "Country Comparison", "Trends Over Time", "Regional Analysis", "Country Profiles", "Interactive Data Explorer"]
 selected_page = st.sidebar.radio("Go to", pages)
 
@@ -88,15 +76,27 @@ if selected_page == "Global Overview":
     This page provides a global overview of TB prevalence and mortality.
     """)
 
+    # Add dropdown for page purpose
+    with st.expander("What is the purpose of this page?"):
+        st.write("This page provides a high-level summary of global TB statistics, including total population, TB prevalence, and TB deaths. It also includes visualizations to explore TB distribution by region and country.")
+
     # Display key metrics
     st.subheader("Global Key Metrics")
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("Total Population", f"{df['population'].sum():,}")  # Corrected to use actual sum
+        st.metric("Total Population", f"{round(df['population'].sum()/23):,}") 
     with col2:
-        st.metric("Total TB Prevalence", f"{df['tb_prevalence_total'].sum():,}")
+        st.metric("Total TB Prevalence", f"{round(df['tb_prevalence_total'].sum()/23):,}")
     with col3:
-        st.metric("Total TB Deaths", f"{df['tb_deaths_total'].sum():,}")
+        st.metric("Total TB Deaths", f"{round(df['tb_deaths_total'].sum()/23):,}")
+
+    # Add dropdown for metric explanation
+    with st.expander("What do these metrics mean?"):
+        st.write("""
+        - **Total Population**: The total population across all countries in the dataset.
+        - **Total TB Prevalence**: The total number of TB cases (all forms) across all countries.
+        - **Total TB Deaths**: The total number of deaths caused by TB (excluding HIV) across all countries.
+        """)
 
     # Update the Plotly map to color the countries instead of using blobs
     st.subheader("Global TB Prevalence Map")
@@ -105,9 +105,9 @@ if selected_page == "Global Overview":
         locations="iso3",
         color="tb_prevalence_100k",
         hover_name="country",
-        projection="equirectangular",  # Flat projection
+        projection="equirectangular",
         title="Global TB Prevalence by Country",
-        color_continuous_scale=px.colors.sequential.Magma_r,
+        color_continuous_scale=px.colors.sequential.Magma_r
     )
     st.plotly_chart(map_fig)
 
@@ -137,6 +137,32 @@ if selected_page == "Global Overview":
 
 elif selected_page == "Country Comparison":
     st.title("📊 Country Comparison")
+
+    # Add dropdown for page purpose
+    with st.expander("What is the purpose of this page?"):
+        st.write("This page allows users to compare TB statistics across selected countries for a specific year.")
+
+    # Add filter options to the Country Comparison page
+    st.subheader("Filter Options")
+        color='country',
+        color_discrete_sequence=px.colors.sequential.Plasma,
+    )
+    st.plotly_chart(top_bar)
+
+elif selected_page == "Country Comparison":
+    st.title("📊 Country Comparison")
+
+    # Add filter options to the Country Comparison page
+    st.subheader("Filter Options")
+    selected_year = st.selectbox("Select Year", sorted(df['year'].unique(), reverse=True))
+    selected_country = st.multiselect("Select Country", df['country'].unique(), default=["India", "Pakistan", "China"])
+
+    # Filtered data
+    filtered_df = df[(df['year'] == selected_year) & (df['country'].isin(selected_country))]
+    if st.button("Show Filtered Data"):
+        st.write(filtered_df)
+
+    # Add visualizations
     st.subheader("TB Incidence per Country")
     fig1 = px.bar(
         filtered_df,
@@ -161,7 +187,7 @@ elif selected_page == "Country Comparison":
 
 elif selected_page == "Trends Over Time":
     st.title("📈 Trends Over Time")
-    trend_country = st.selectbox("Select Country for Trend", countries)
+    trend_country = st.selectbox("Select Country for Trend", df['country'].unique())
     trend_df = df[df['country'] == trend_country]
 
     st.subheader(f"TB Incidence Trend in {trend_country}")
@@ -251,7 +277,7 @@ elif selected_page == "Regional Analysis":
 
 elif selected_page == "Country Profiles":
     st.title("🌍 Country Profiles")
-    selected_country_profile = st.selectbox("Select a Country", countries)
+    selected_country_profile = st.selectbox("Select a Country", df['country'].unique())
     country_df = df[df['country'] == selected_country_profile]
 
     st.subheader(f"Detailed Statistics for {selected_country_profile}")
