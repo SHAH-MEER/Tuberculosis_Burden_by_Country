@@ -293,9 +293,10 @@ elif selected_page == "Country Profiles":
 
 elif selected_page == "Interactive Data Explorer":
     st.title("🔍 Interactive Data Explorer")
-    st.markdown("""
-    Use the filters below to explore the dataset interactively.
-    """)
+
+    # Add dropdown for page purpose
+    with st.expander("What is the purpose of this page?"):
+        st.write("This page allows users to explore the dataset interactively by applying filters and custom queries. It also provides visualizations based on the filtered data.")
 
     # Add filters for interactive exploration
     selected_region = st.multiselect("Select Region", df['region'].unique(), default=df['region'].unique())
@@ -303,6 +304,14 @@ elif selected_page == "Interactive Data Explorer":
 
     explorer_df = df[(df['region'].isin(selected_region)) & (df['year'].between(*selected_years))]
     st.write(explorer_df)
+
+    # Add dropdown for metric explanation
+    with st.expander("What do these metrics mean?"):
+        st.write("""
+        - **Region**: The geographical region to which the country belongs.
+        - **Year Range**: The range of years for which data is displayed.
+        - **Custom Query Results**: Results based on user-defined conditions applied to the dataset.
+        """)
 
     st.subheader("Custom Query Results")
     query = st.text_area("Enter a custom query (e.g., `tb_prevalence_100k > 100`)")
