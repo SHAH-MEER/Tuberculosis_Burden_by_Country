@@ -1,10 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import folium
-from streamlit_folium import st_folium
-from geopy.geocoders import Nominatim
-import time
+
 
 st.set_page_config(layout="wide")
 # Load data
@@ -40,7 +37,11 @@ def load_data():
     return df
 
 
+# Add latitude and longitude columns using geopy (asynchronous version)
+
 df = load_data()
+
+# Ensure latitude and longitude columns are added to the DataFrame
 
 
 # Sidebar filters
@@ -56,48 +57,32 @@ filtered_df = df[(df['year'] == selected_year) & (df['country'].isin(selected_co
 
 # Sidebar navigation
 st.sidebar.title("Navigation")
-pages = ["Global Overview", "Country Comparison", "Trends Over Time", "Regional Analysis"]
+# Move the Documentation page to the first position in the navigation
+pages = ["Documentation", "Global Overview", "Country Comparison", "Trends Over Time", "Regional Analysis"]
 selected_page = st.sidebar.radio("Go to", pages)
 
-# Add a documentation page
-if "Documentation" not in pages:
-    pages.append("Documentation")
-
+if selected_page == "Global Overview":
+    st.title("🌍 Global Overview")
+    st.markdown("""
 if selected_page == "Global Overview":
     st.title("🌍 Global Overview")
     st.markdown("""
     This page provides a global overview of TB prevalence and mortality.
     """)
 
-    # Create a Folium map with Choropleth for TB prevalence
-    m = folium.Map(location=[0, 0], zoom_start=2)
-
-    # Add Choropleth layer for TB prevalence
-    folium.Choropleth(
-        geo_data=df.dropna(subset=['latitude', 'longitude']),
-        data=df,
-        columns=['country', 'tb_prevalence_100k'],
-        key_on='feature.properties.country',
-        fill_color='YlGnBu',
-        fill_opacity=0.7,
-        line_opacity=0.2,
-        legend_name='TB Prevalence per 100k Population'
-    ).add_to(m)
-
-    # Add circle markers for each country
-    valid_locations = df.dropna(subset=['latitude', 'longitude'])
-    for _, row in valid_locations.iterrows():
-        folium.CircleMarker(
-            location=[row['latitude'], row['longitude']],
-            radius=5,
-            popup=f"{row['country']}: {row['tb_prevalence_100k']} per 100k",
-            color='blue',
-            fill=True,
-            fill_color='blue'
-        ).add_to(m)
-
-    # Display the map
-    st_folium(m, width=700, height=500)
+    # Create a Plotly map for TB prevalence
+    st.subheader("Global TB Prevalence Map")
+    map_fig = px.scatter_geo(
+        df,
+        locations="iso3",
+        color="tb_prevalence_100k",
+        hover_name="country",
+        size="tb_prevalence_100k",
+        projection="natural earth",
+        title="Global TB Prevalence per 100k Population",
+        color_continuous_scale=px.colors.sequential.Plasma
+    )
+    st.plotly_chart(map_fig)
 
     # Add a pie chart for TB prevalence by region
     st.subheader("TB Prevalence by Region")
@@ -126,11 +111,25 @@ if selected_page == "Global Overview":
 elif selected_page == "Country Comparison":
     st.title("📊 Country Comparison")
     st.subheader("TB Incidence per Country")
-    fig1 = px.bar(filtered_df, x='country', y='tb_prevalence_100k', color='country', title="Estimated TB Incidence per 100,000")
+    fig1 = px.bar(
+        filtered_df,
+        x='country',
+        y='tb_prevalence_100k',
+        color='country',
+        title="Estimated TB Incidence per 100,000",
+        color_discrete_sequence=px.colors.sequential.Viridis
+    )
     st.plotly_chart(fig1)
 
     st.subheader("TB Mortality per Country")
-    fig2 = px.bar(filtered_df, x='country', y='tb_mortality_100k', color='country', title="Estimated TB Mortality per 100,000")
+    fig2 = px.bar(
+        filtered_df,
+        x='country',
+        y='tb_mortality_100k',
+        color='country',
+        title="Estimated TB Mortality per 100,000",
+        color_discrete_sequence=px.colors.sequential.Cividis
+    )
     st.plotly_chart(fig2)
 
 elif selected_page == "Trends Over Time":
@@ -138,20 +137,51 @@ elif selected_page == "Trends Over Time":
     trend_country = st.selectbox("Select Country for Trend", countries)
     trend_df = df[df['country'] == trend_country]
 
-    fig3 = px.line(trend_df, x='year', y='tb_incidence_100k', title=f"TB Incidence Trend in {trend_country}")
+    st.subheader(f"TB Incidence Trend in {trend_country}")
+    fig3 = px.line(
+        trend_df,
+        x='year',
+        y='tb_incidence_100k',
+        title=f"TB Incidence Trend in {trend_country}",
+        color_discrete_sequence=["#636EFA"]
+    )
     st.plotly_chart(fig3)
+
+    st.subheader(f"TB Mortality Trend in {trend_country}")
+    fig4 = px.line(
+        trend_df,
+        x='year',
+        y='tb_mortality_100k',
+        title=f"TB Mortality Trend in {trend_country}",
+        color_discrete_sequence=["#EF553B"]
+    )
+    st.plotly_chart(fig4)
 
 elif selected_page == "Regional Analysis":
     st.title("🌎 Regional Analysis")
     selected_region = st.selectbox("Select Region", df['region'].unique())
     regional_df = df[df['region'] == selected_region]
 
-    st.subheader("Regional TB Prevalence")
-    region_fig = px.bar(regional_df, x='country', y='tb_prevalence_100k', color='country', title=f"TB Prevalence in {selected_region}")
+    st.subheader(f"TB Prevalence in {selected_region}")
+    region_fig = px.bar(
+        regional_df,
+        x='country',
+        y='tb_prevalence_100k',
+        color='country',
+        title=f"TB Prevalence in {selected_region}",
+        color_discrete_sequence=px.colors.sequential.Aggrnyl
+    )
     st.plotly_chart(region_fig)
 
-    st.subheader("Regional TB Mortality")
-    region_mortality_fig = px.bar(regional_df, x='country', y='tb_mortality_100k', color='country', title=f"TB Mortality in {selected_region}")
+    st.subheader(f"TB Mortality in {selected_region}")
+    region_mortality_fig = px.bar(
+        regional_df,
+        x='country',
+        y='tb_mortality_100k',
+        color='country',
+        title=f"TB Mortality in {selected_region}",
+        color_discrete_sequence=px.colors.sequential.OrRd
+    )
     st.plotly_chart(region_mortality_fig)
 
 elif selected_page == "Documentation":
@@ -168,7 +198,7 @@ elif selected_page == "Documentation":
     - **Regional Analysis:** Bar charts analyzing TB prevalence and mortality by region.
 
     ### Recent Updates:
-    - **[May 2025]** Added a Folium-based interactive map for the Global Overview page.
+    - **[May 2025]** Added a Plotly-based interactive map for the Global Overview page.
     - **[May 2025]** Integrated geocoding to fetch latitude and longitude for countries.
     - **[May 2025]** Added a Documentation page to track updates and features.
 
