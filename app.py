@@ -1029,36 +1029,37 @@ elif selected_page == "Country Similarity & Correlation":
 
             # Display the top N similar countries
             num_similar_countries = st.slider("Number of similar countries to show", 5, 20, 10)
-            # Display similar countries in a formatted way
-            similar_countries_df = sorted_similar_countries.head(num_similar_countries).reset_index()
-            similar_countries_df.columns = ['Country', 'Cosine Similarity Score']
-            # st.dataframe(similar_countries_df) # Remove the table display
-
-            # Add a bar chart for similarity scores
-            st.subheader("Cosine Similarity Scores")
-            similarity_bar_chart = px.bar(
-                similar_countries_df,
-                x='Country',
-                y='Cosine Similarity Score',
-                title=f"Cosine Similarity Scores for Countries Most Similar to {selected_country_similarity}",
-                labels={'Cosine Similarity Score': 'Score'}
-            )
-            st.plotly_chart(similarity_bar_chart, use_container_width=True)
-
-            # Add visual comparison: Bar chart comparing metrics of selected country and similar countries
-            st.subheader("Metric Comparison with Similar Countries")
-
+            
             # Get data for the selected country and the top similar countries for the latest year
-            compare_countries = [selected_country_similarity] + similar_countries_df['Country'].tolist()
+            compare_countries = [selected_country_similarity] + sorted_similar_countries.head(num_similar_countries).index.tolist()
             compare_df = df[(df['year'] == latest_year) & (df['country'].isin(compare_countries))]
 
             if not compare_df.empty:
-                # Melt the DataFrame to long format for easy plotting
+                # Display similar countries in a formatted way (Bar chart for scores)
+                similar_countries_df = sorted_similar_countries.head(num_similar_countries).reset_index()
+                similar_countries_df.columns = ['Country', 'Cosine Similarity Score']
+                # st.dataframe(similar_countries_df) # Remove the table display
+
+                # Add a bar chart for similarity scores
+                st.subheader("Cosine Similarity Scores")
+                similarity_bar_chart = px.bar(
+                    similar_countries_df,
+                    x='Country',
+                    y='Cosine Similarity Score',
+                    title=f"Cosine Similarity Scores for Countries Most Similar to {selected_country_similarity}",
+                    labels={'Cosine Similarity Score': 'Score'}
+                )
+                st.plotly_chart(similarity_bar_chart, use_container_width=True)
+
+                # Melt the DataFrame to long format for easy plotting (Define compare_melted here)
                 compare_melted = compare_df.melt(id_vars=['country', 'year'], value_vars=similarity_cols, var_name='Metric', value_name='Value')
+
+                # Add visual comparison: Bar chart comparing metrics of selected country and similar countries
+                st.subheader("Metric Comparison with Similar Countries")
 
                 # Create a grouped bar chart
                 comparison_bar = px.bar(
-                    compare_melted,
+                    compare_melted, 
                     x='Metric',
                     y='Value',
                     color='country',
@@ -1088,7 +1089,7 @@ elif selected_page == "Country Similarity & Correlation":
                 st.plotly_chart(radar_chart, use_container_width=True)
 
             else:
-                st.warning("Not enough data to compare metrics for the selected country and similar countries.")
+                st.warning("Not enough data to compare metrics for the selected country and similar countries for the selected year.") # Refined warning message
 
     else:
         st.warning("Not enough data to perform similarity analysis after handling missing values.")
@@ -1122,7 +1123,7 @@ elif selected_page == "Interactive Maps":
             animation_frame="year", # Animate based on the year column
             projection="equirectangular",
             title=f"Global {metric_to_map.replace('tb_', 'TB ').replace('_', ' ').title()} Over Time", # General title for animation
-            color_continuous_scale="Magma_r", # Use Viridis for sequential data
+            color_continuous_scale="Viridis", # Use Viridis for sequential data
             labels={metric_to_map: metric_to_map.replace('tb_', 'TB ').replace('_', ' ').title()}
         )
         map_fig.update_layout(
@@ -1131,7 +1132,9 @@ elif selected_page == "Interactive Maps":
                 showcoastlines=True,
                 projection_type='equirectangular'
             ),
-            margin=dict(l=0, r=0, t=30, b=0)
+            margin=dict(l=0, r=0, t=30, b=0),
+            height=600, # Increase map height
+            width=1000 # Increase map width
         )
         st.plotly_chart(map_fig, use_container_width=True)
     else:
@@ -1142,26 +1145,34 @@ elif selected_page == "Documentation":
     st.markdown("""
     # Global Tuberculosis (TB) Burden Dashboard
 
-    This Streamlit dashboard provides interactive analytics and visualizations for the global burden of Tuberculosis (TB) using data from the World Health Organization (WHO).
+    This Streamlit dashboard provides interactive analytics and visualizations for the global burden of Tuberculosis (TB) using data from the World Health Organization (WHO) from 1990 to 2023.
 
     ## Features
-    - **Global Overview:** Explore global TB distribution with maps, regional and country comparisons, incidence/mortality relationships, and population vs. incidence trends.
-    - **Country Comparison:** Compare key TB metrics, trends, heatmaps, and total cases/deaths for selected countries over a chosen year or range.
-    - **Trends Over Time:** Analyze incidence and mortality trends, yearly distributions, total cases over time, detection rate trends, and HIV in TB trends for a selected country.
-    - **Regional Analysis:** Visualize regional TB metrics with bars, pies, and boxes, explore population vs. mortality relationships, and view average incidence trends over time for a selected region.
-    - **Country Profiles:** Get a detailed look at a single country with key metrics, the full data table, proportion of metrics, total metrics bar chart, and trends including incidence, mortality, total cases, detection rate, and HIV in TB vs. detection rate over years.
-    - **Interactive Data Explorer:** Filter, query, and create custom plots (scatter, line, bar, histogram, box, violin) on the dataset. Includes regional prevalence violin plot and average prevalence over years line chart.
-    - **Country Similarity Analysis:** Discover countries with similar TB profiles based on key metrics from the most recent year using cosine similarity. Includes a bar chart of similarity scores, a bar chart comparing metrics with similar countries, and a radar chart for profile comparison.
+    - **Global Overview:** Explore global TB distribution with interactive maps, regional and country comparisons, incidence/mortality relationships, and population vs. incidence trends. Key metrics like Total Population, Total TB Incidence, and Total TB Deaths are normalized to a single year for realistic representation.
+    - **Country Comparison:** Compare key TB metrics (Incidence per 100k, Mortality per 100k), trends over time (line chart), and a heatmap for selected countries and a specific year or range. Includes a stacked bar chart for total incident cases and deaths.
+    - **Trends Over Time:** Analyze incidence and mortality trends over the years for a selected country with line and bar charts, dual-axis plots for incidence vs. mortality, a histogram for incidence rate distribution, total incident cases area chart, detection rate trend, and HIV in TB trend.
+    - **Regional Analysis:** Visualize regional TB metrics (Incidence per 100k, Mortality per 100k, Deaths) using bar, pie, and box plots. Explore the relationship between population and mortality and view the average incidence trend over time for a selected region.
+    - **Country Profiles:** Get a detailed look at a single country. The **Detailed Statistics** tab provides key normalized metrics, the full data table for the country across all years, proportion of metrics (Incidence, Deaths), a total metrics bar chart, and average key metrics across all years bar chart. The **Trends** tab shows yearly trends for incidence, mortality, total cases, detection rate, and a scatter plot for HIV in TB vs. detection rate over years.
+    - **Interactive Data Explorer:** A flexible tool to filter the dataset by region, country, and year range. Enter custom queries to filter data further. Create custom plots (scatter, line, bar, histogram, box, violin) by selecting plot type and axes. Also includes pre-defined violin plot for regional prevalence and line chart for average prevalence over years.
+    - **Country Similarity Analysis:** Discover countries with similar TB profiles based on key metrics (Incidence, Mortality, HIV in TB, Detection Rate) from the most recent year using cosine similarity. Visualizations include a bar chart of similarity scores, a bar chart comparing metrics with similar countries, and a radar chart for profile comparison.
+    - **Interactive Maps:** Visualize the global distribution of various TB metrics (Incidence per 100k, Mortality per 100k, HIV in TB %, Detection Rate) over time with an animated choropleth map for the years 1990-2023.
 
     ## Data Source
     - World Health Organization (WHO)
+    - Data file: `data/combined_tb_data_1990_2023.csv`
 
     ## How to Use
-    1. Use the sidebar to navigate between pages.
-    2. Filter data by year, country, or region using the available widgets.
-    3. Explore interactive visualizations and insights on each page by hovering over or zooming in on plots.
-    4. Use the **Interactive Data Explorer** for custom analysis and plotting.
-    5. Use the **Country Similarity Analysis** to find countries with similar TB burdens.
+    1. Use the sidebar navigation to access different analysis pages.
+    2. Utilize the interactive widgets (selectboxes, sliders, multiselects, text area) on each page to filter data and customize visualizations.
+    3. Hover over plot elements for tooltips with specific data points.
+    4. Use the zoom and pan controls on the plots to explore details.
+
+    ## Normalization Note
+    - Some key metrics (Total Population, Total TB Incidence, Total TB Deaths) are normalized to a single year by dividing the sum across all years by the total number of years in the dataset (33 years).
+
+    ## Customization
+    - To use updated or different data, replace the `data/combined_tb_data_1990_2023.csv` file with your new dataset. Ensure it has similar columns or update the `load_data` function and plot configurations accordingly.
+    - To add new visualizations or analysis, modify the `app.py` file. Refer to the existing code for examples using Streamlit and Plotly Express.
 
     ## Contact
     For questions or feedback, please contact [shahmeershahzad67@gmail.com](mailto:shahmeershahzad67@gmail.com).
