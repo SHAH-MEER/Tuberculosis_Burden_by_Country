@@ -47,7 +47,7 @@ df = load_data()
 
 # Sidebar navigation
 st.sidebar.title("Navigation")
-pages = ["Documentation", "Global Overview", "Country Comparison", "Trends Over Time", "Regional Analysis", "Country Profiles", "Interactive Data Explorer", "Country Similarity & Correlation"]
+pages = ["Documentation", "Global Overview", "Country Comparison", "Trends Over Time", "Regional Analysis", "Country Profiles", "Interactive Data Explorer", "Country Similarity Analysis", "Interactive Maps"]
 selected_page = st.sidebar.radio("Go to", pages)
 
 if selected_page == "Global Overview":
@@ -1092,6 +1092,50 @@ elif selected_page == "Country Similarity & Correlation":
 
     else:
         st.warning("Not enough data to perform similarity analysis after handling missing values.")
+
+elif selected_page == "Interactive Maps":
+    st.title("🗺️ Interactive Maps")
+    st.markdown("""
+    Explore the global distribution of various TB metrics using interactive maps. Select a metric and a year to visualize the data across countries.
+    """)
+
+    # Placeholder for map visualization
+    st.subheader("Global Map Visualization")
+
+    # Select metric and year for the map
+    metric_to_map = st.selectbox(
+        "Select Metric to Map",
+        ['tb_incidence_100k', 'tb_mortality_100k', 'hiv_in_tb_percent', 'detection_rate'],
+        format_func=lambda x: x.replace('tb_', 'TB ').replace('_', ' ').title()
+    )
+
+    # Use the full dataframe for animation
+    map_df = df.copy()
+
+    if not map_df.empty:
+        # Create the choropleth map with animation_frame
+        map_fig = px.choropleth(
+            map_df,
+            locations="iso3",
+            color=metric_to_map,
+            hover_name="country",
+            animation_frame="year", # Animate based on the year column
+            projection="equirectangular",
+            title=f"Global {metric_to_map.replace('tb_', 'TB ').replace('_', ' ').title()} Over Time", # General title for animation
+            color_continuous_scale="Viridis", # Use Viridis for sequential data
+            labels={metric_to_map: metric_to_map.replace('tb_', 'TB ').replace('_', ' ').title()}
+        )
+        map_fig.update_layout(
+            geo=dict(
+                showframe=False,
+                showcoastlines=True,
+                projection_type='equirectangular'
+            ),
+            margin=dict(l=0, r=0, t=30, b=0)
+        )
+        st.plotly_chart(map_fig, use_container_width=True)
+    else:
+        st.warning("Not enough data to display map for the selected options.")
 
 elif selected_page == "Documentation":
     st.title("📚 Documentation")
