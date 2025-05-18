@@ -1071,13 +1071,28 @@ elif selected_page == "Country Similarity Analysis":
 
                 # Add a Scatter Matrix for selected country and similar countries
                 st.subheader("Metric Scatter Matrix Comparison")
-                scatter_matrix_fig = px.scatter_matrix(
-                    compare_df, # Use compare_df which contains data for selected and similar countries
-                    dimensions=similarity_cols, # Use the metrics used for similarity
-                    color='country', # Color by country
-                    title=f"Scatter Matrix of TB Metrics for {selected_country_similarity} and Similar Countries ({latest_year})"
+
+                # Add multiselect for choosing metrics for scatter matrix
+                selected_scatter_metrics = st.multiselect(
+                    "Select Metrics for Scatter Matrix",
+                    similarity_cols, # Use the same metrics defined for similarity calculation
+                    default=similarity_cols # Default to showing all similarity metrics
                 )
-                st.plotly_chart(scatter_matrix_fig, use_container_width=True)
+
+                if selected_scatter_metrics:
+                    scatter_matrix_fig = px.scatter_matrix(
+                        compare_df, # Use compare_df which contains data for selected and similar countries
+                        dimensions=selected_scatter_metrics, # Use only the selected metrics
+                        color='country', # Color by country
+                        title=f"Scatter Matrix of Selected TB Metrics for {selected_country_similarity} and Similar Countries ({latest_year})"
+                    )
+                    # Remove invalid layout property
+                    # scatter_matrix_fig.update_layout(
+                    #     diagonal_visible=False # Hide diagonal histograms for clarity
+                    # )
+                    st.plotly_chart(scatter_matrix_fig, use_container_width=True)
+                else:
+                    st.info("Please select at least one metric for the scatter matrix.")
 
             else:
                 st.warning("Not enough data to compare metrics for the selected country and similar countries for the selected year.") # Refined warning message
