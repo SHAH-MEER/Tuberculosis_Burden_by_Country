@@ -1122,7 +1122,7 @@ elif selected_page == "Interactive Maps":
             animation_frame="year", # Animate based on the year column
             projection="equirectangular",
             title=f"Global {metric_to_map.replace('tb_', 'TB ').replace('_', ' ').title()} Over Time", # General title for animation
-            color_continuous_scale="Viridis", # Use Viridis for sequential data
+            color_continuous_scale="Magma_r", # Use Viridis for sequential data
             labels={metric_to_map: metric_to_map.replace('tb_', 'TB ').replace('_', ' ').title()}
         )
         map_fig.update_layout(
@@ -1155,7 +1155,6 @@ elif selected_page == "Documentation":
 
     ## Data Source
     - World Health Organization (WHO)
-    - Data file: `data/combined_tb_data_1990_2023.csv`
 
     ## How to Use
     1. Use the sidebar to navigate between pages.
@@ -1163,13 +1162,6 @@ elif selected_page == "Documentation":
     3. Explore interactive visualizations and insights on each page by hovering over or zooming in on plots.
     4. Use the **Interactive Data Explorer** for custom analysis and plotting.
     5. Use the **Country Similarity Analysis** to find countries with similar TB burdens.
-
-    ## Normalization Note
-    - Some key metrics (Total Population, Total TB Incidence, Total TB Deaths) are normalized to a single year to provide realistic annual values and avoid inflated totals over the entire dataset period.
-
-    ## Customization
-    - Add or update data in `data/combined_tb_data_1990_2023.csv`.
-    - Modify `app.py` to add new visualizations, metrics, or analytics as needed.
 
     ## Contact
     For questions or feedback, please contact [shahmeershahzad67@gmail.com](mailto:shahmeershahzad67@gmail.com).
