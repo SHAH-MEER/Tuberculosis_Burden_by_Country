@@ -804,6 +804,25 @@ elif selected_page == "Country Profiles":
         )
         st.plotly_chart(scatter_hiv_detection, use_container_width=True)
 
+        # Uncomment and keep the Radar Chart here in Country Similarity Analysis
+        st.subheader("Radar Chart Comparison")
+
+        # Radar chart requires a specific data structure
+        # We already have compare_melted which is in long format, suitable for radar chart
+        radar_chart = px.line_polar(
+            compare_melted, 
+            r='Value', 
+            theta='Metric', 
+            color='country',
+            line_close=True,
+            title=f"Radar Chart of TB Metrics for {selected_country_profile} and Similar Countries ({latest_year})",
+            # Add line tension for smoother lines
+            line_shape='linear' # line_shape IS valid for line_polar
+        )
+        # Customize radar chart layout
+        radar_chart.update_traces(fill='toself')
+        st.plotly_chart(radar_chart, use_container_width=True)
+
 elif selected_page == "Interactive Data Explorer":
     st.title("🔍 Interactive Data Explorer")
     with st.expander("What is the purpose of this page?"):
@@ -1050,36 +1069,23 @@ elif selected_page == "Country Similarity & Correlation":
                 st.plotly_chart(comparison_bar, use_container_width=True)
 
                 # Add a Radar Chart for comparison
-                # st.subheader("Radar Chart Comparison")
+                st.subheader("Radar Chart Comparison")
 
                 # Radar chart requires a specific data structure
                 # We already have compare_melted which is in long format, suitable for radar chart
-                # radar_chart = px.line_polar(
-                #     country_df, 
-                #     r='tb_incidence_100k', 
-                #     theta='tb_mortality_100k', 
-                #     color='year',
-                #     line_close=True,
-                #     title=f"Radar Chart of TB Metrics for {selected_country_similarity} and Similar Countries ({latest_year})",
-                #     # Add line tension for smoother lines
-                #     line_shape='linear'
-                # )
-                # # Customize radar chart layout
-                # radar_chart.update_traces(fill='toself')
-                # st.plotly_chart(radar_chart, use_container_width=True)
-
-                # Add a scatter plot showing HIV in TB Percentage vs. Detection Rate over years
-                st.subheader("HIV in TB vs. Detection Rate Over Years")
-                scatter_hiv_detection = px.scatter(
+                radar_chart = px.line_polar(
                     compare_melted, 
-                    x='Value', 
-                    y='Metric', 
+                    r='Value', 
+                    theta='Metric', 
                     color='country',
-                    title=f"HIV in TB vs. Detection Rate Over Years in {selected_country_similarity}",
+                    line_close=True,
+                    title=f"Radar Chart of TB Metrics for {selected_country_similarity} and Similar Countries ({latest_year})",
                     # Add line tension for smoother lines
-                    line_shape='linear'
+                    line_shape='linear' # line_shape IS valid for line_polar
                 )
-                st.plotly_chart(scatter_hiv_detection, use_container_width=True)
+                # Customize radar chart layout
+                radar_chart.update_traces(fill='toself')
+                st.plotly_chart(radar_chart, use_container_width=True)
 
             else:
                 st.warning("Not enough data to compare metrics for the selected country and similar countries.")
@@ -1095,12 +1101,13 @@ elif selected_page == "Documentation":
     This Streamlit dashboard provides interactive analytics and visualizations for the global burden of Tuberculosis (TB) using data from the World Health Organization (WHO).
 
     ## Features
-    - **Global Overview:** Explore TB prevalence and mortality worldwide with interactive maps, charts, and distribution analysis.
-    - **Country Comparison:** Compare TB metrics across countries and years with bar, line, and heatmap visualizations.
-    - **Trends Over Time:** Analyze incidence and mortality trends for any country, including dual-axis, histogram, and scatter plots.
-    - **Regional Analysis:** Visualize TB metrics by region with bar, pie, and box plots.
-    - **Country Profiles:** Detailed statistics and trends for individual countries, including pie, bar, and scatter plots.
-    - **Interactive Data Explorer:** Filter, query, and visualize the dataset with violin, line, and bar plots.
+    - **Global Overview:** Explore global TB distribution with maps, regional and country comparisons, incidence/mortality relationships, and population vs. incidence trends.
+    - **Country Comparison:** Compare key TB metrics, trends, heatmaps, and total cases/deaths for selected countries over a chosen year or range.
+    - **Trends Over Time:** Analyze incidence and mortality trends, yearly distributions, total cases over time, detection rate trends, and HIV in TB trends for a selected country.
+    - **Regional Analysis:** Visualize regional TB metrics with bars, pies, and boxes, explore population vs. mortality relationships, and view average incidence trends over time for a selected region.
+    - **Country Profiles:** Get a detailed look at a single country with key metrics, the full data table, proportion of metrics, total metrics bar chart, and trends including incidence, mortality, total cases, detection rate, and HIV in TB vs. detection rate over years.
+    - **Interactive Data Explorer:** Filter, query, and create custom plots (scatter, line, bar, histogram, box, violin) on the dataset. Includes regional prevalence violin plot and average prevalence over years line chart.
+    - **Country Similarity Analysis:** Discover countries with similar TB profiles based on key metrics from the most recent year using cosine similarity. Includes a bar chart of similarity scores, a bar chart comparing metrics with similar countries, and a radar chart for profile comparison.
 
     ## Data Source
     - World Health Organization (WHO)
@@ -1108,16 +1115,17 @@ elif selected_page == "Documentation":
 
     ## How to Use
     1. Use the sidebar to navigate between pages.
-    2. Filter data by year, country, or region as needed.
-    3. Explore interactive visualizations and insights on each page.
-    4. Use the Interactive Data Explorer for custom queries and advanced analytics.
+    2. Filter data by year, country, or region using the available widgets.
+    3. Explore interactive visualizations and insights on each page by hovering over or zooming in on plots.
+    4. Use the **Interactive Data Explorer** for custom analysis and plotting.
+    5. Use the **Country Similarity Analysis** to find countries with similar TB burdens.
 
     ## Normalization Note
-    - Most metrics are normalized to a single year (data spans 33 years) to provide realistic annual values and avoid inflated totals.
+    - Some key metrics (Total Population, Total TB Incidence, Total TB Deaths) are normalized to a single year to provide realistic annual values and avoid inflated totals over the entire dataset period.
 
     ## Customization
     - Add or update data in `data/combined_tb_data_1990_2023.csv`.
-    - Modify `app.py` to add new visualizations or analytics as needed.
+    - Modify `app.py` to add new visualizations, metrics, or analytics as needed.
 
     ## Contact
     For questions or feedback, please contact [shahmeershahzad67@gmail.com](mailto:shahmeershahzad67@gmail.com).
