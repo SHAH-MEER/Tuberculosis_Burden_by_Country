@@ -804,25 +804,6 @@ elif selected_page == "Country Profiles":
         )
         st.plotly_chart(scatter_hiv_detection, use_container_width=True)
 
-        # Uncomment and keep the Radar Chart here in Country Similarity Analysis
-        st.subheader("Radar Chart Comparison")
-
-        # Radar chart requires a specific data structure
-        # We already have compare_melted which is in long format, suitable for radar chart
-        radar_chart = px.line_polar(
-            compare_melted, 
-            r='Value', 
-            theta='Metric', 
-            color='country',
-            line_close=True,
-            title=f"Radar Chart of TB Metrics for {selected_country_profile} and Similar Countries ({latest_year})",
-            # Add line tension for smoother lines
-            line_shape='linear' # line_shape IS valid for line_polar
-        )
-        # Customize radar chart layout
-        radar_chart.update_traces(fill='toself')
-        st.plotly_chart(radar_chart, use_container_width=True)
-
 elif selected_page == "Interactive Data Explorer":
     st.title("🔍 Interactive Data Explorer")
     with st.expander("What is the purpose of this page?"):
@@ -972,7 +953,7 @@ elif selected_page == "Interactive Data Explorer":
         )
         st.plotly_chart(avg_line)
 
-elif selected_page == "Country Similarity & Correlation":
+elif selected_page == "Country Similarity Analysis":
     st.title("🌎 Country Similarity Analysis")
     st.markdown("""
     This page allows you to explore the similarity between countries based on their TB profiles. 
@@ -1069,25 +1050,6 @@ elif selected_page == "Country Similarity & Correlation":
                 )
                 st.plotly_chart(comparison_bar, use_container_width=True)
 
-                # Add a Radar Chart for comparison
-                st.subheader("Radar Chart Comparison")
-
-                # Radar chart requires a specific data structure
-                # We already have compare_melted which is in long format, suitable for radar chart
-                radar_chart = px.line_polar(
-                    compare_melted, 
-                    r='Value', 
-                    theta='Metric', 
-                    color='country',
-                    line_close=True,
-                    title=f"Radar Chart of TB Metrics for {selected_country_similarity} and Similar Countries ({latest_year})",
-                    # Add line tension for smoother lines
-                    line_shape='linear' # line_shape IS valid for line_polar
-                )
-                # Customize radar chart layout
-                radar_chart.update_traces(fill='toself')
-                st.plotly_chart(radar_chart, use_container_width=True)
-
             else:
                 st.warning("Not enough data to compare metrics for the selected country and similar countries for the selected year.") # Refined warning message
 
@@ -1133,8 +1095,8 @@ elif selected_page == "Interactive Maps":
                 projection_type='equirectangular'
             ),
             margin=dict(l=0, r=0, t=30, b=0),
-            height=600, # Increase map height
-            width=1000 # Increase map width
+            height=700, # Further increase map height
+            width=1200 # Further increase map width
         )
         st.plotly_chart(map_fig, use_container_width=True)
     else:
@@ -1151,10 +1113,10 @@ elif selected_page == "Documentation":
     - **Global Overview:** Explore global TB distribution with interactive maps, regional and country comparisons, incidence/mortality relationships, and population vs. incidence trends. Key metrics like Total Population, Total TB Incidence, and Total TB Deaths are normalized to a single year for realistic representation.
     - **Country Comparison:** Compare key TB metrics (Incidence per 100k, Mortality per 100k), trends over time (line chart), and a heatmap for selected countries and a specific year or range. Includes a stacked bar chart for total incident cases and deaths.
     - **Trends Over Time:** Analyze incidence and mortality trends over the years for a selected country with line and bar charts, dual-axis plots for incidence vs. mortality, a histogram for incidence rate distribution, total incident cases area chart, detection rate trend, and HIV in TB trend.
-    - **Regional Analysis:** Visualize regional TB metrics (Incidence per 100k, Mortality per 100k, Deaths) using bar, pie, and box plots. Explore the relationship between population and mortality and view the average incidence trend over time for a selected region.
+    - **Regional Analysis:** Visualize regional TB metrics (Incidence per 100k, Mortality per 100k, Deaths) using bar, pie, and box plots. Explore the relationship between population and mortality and view the average incidence trend over time for a selected region. Also includes a scatter plot for Incidence vs. Detection Rate.
     - **Country Profiles:** Get a detailed look at a single country. The **Detailed Statistics** tab provides key normalized metrics, the full data table for the country across all years, proportion of metrics (Incidence, Deaths), a total metrics bar chart, and average key metrics across all years bar chart. The **Trends** tab shows yearly trends for incidence, mortality, total cases, detection rate, and a scatter plot for HIV in TB vs. detection rate over years.
     - **Interactive Data Explorer:** A flexible tool to filter the dataset by region, country, and year range. Enter custom queries to filter data further. Create custom plots (scatter, line, bar, histogram, box, violin) by selecting plot type and axes. Also includes pre-defined violin plot for regional prevalence and line chart for average prevalence over years.
-    - **Country Similarity Analysis:** Discover countries with similar TB profiles based on key metrics (Incidence, Mortality, HIV in TB, Detection Rate) from the most recent year using cosine similarity. Visualizations include a bar chart of similarity scores, a bar chart comparing metrics with similar countries, and a radar chart for profile comparison.
+    - **Country Similarity Analysis:** Discover countries with similar TB profiles based on key metrics (Incidence per 100k, Mortality per 100k, HIV in TB %, Detection Rate) from the most recent year using cosine similarity. Includes a bar chart of similarity scores, a bar chart comparing metrics with similar countries, and a radar chart for profile comparison.
     - **Interactive Maps:** Visualize the global distribution of various TB metrics (Incidence per 100k, Mortality per 100k, HIV in TB %, Detection Rate) over time with an animated choropleth map for the years 1990-2023.
 
     ## Data Source
