@@ -1050,6 +1050,35 @@ elif selected_page == "Country Similarity Analysis":
                 )
                 st.plotly_chart(comparison_bar, use_container_width=True)
 
+                # Add a Radar Chart for comparison
+                st.subheader("Radar Chart Comparison")
+
+                # Radar chart requires a specific data structure
+                # We already have compare_melted which is in long format, suitable for radar chart
+                radar_chart = px.line_polar(
+                    compare_melted, 
+                    r='Value', 
+                    theta='Metric', 
+                    color='country',
+                    line_close=True,
+                    title=f"Radar Chart of TB Metrics for {selected_country_similarity} and Similar Countries ({latest_year})",
+                    # Add line tension for smoother lines
+                    line_shape='linear' # line_shape IS valid for line_polar
+                )
+                # Customize radar chart layout
+                radar_chart.update_traces(fill='toself')
+                st.plotly_chart(radar_chart, use_container_width=True)
+
+                # Add a Scatter Matrix for selected country and similar countries
+                st.subheader("Metric Scatter Matrix Comparison")
+                scatter_matrix_fig = px.scatter_matrix(
+                    compare_df, # Use compare_df which contains data for selected and similar countries
+                    dimensions=similarity_cols, # Use the metrics used for similarity
+                    color='country', # Color by country
+                    title=f"Scatter Matrix of TB Metrics for {selected_country_similarity} and Similar Countries ({latest_year})"
+                )
+                st.plotly_chart(scatter_matrix_fig, use_container_width=True)
+
             else:
                 st.warning("Not enough data to compare metrics for the selected country and similar countries for the selected year.") # Refined warning message
 
